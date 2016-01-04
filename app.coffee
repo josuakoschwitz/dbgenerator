@@ -16,6 +16,9 @@ async.series [
   (cb) -> Database.clear cb
   (cb) -> Database.init cb
 
+  # products 2 db / not used. just for me experimenting with sqlite
+  (cb) -> Database.ProductsFromCsv "products.csv", cb
+
   ], (err) ->
     console.log err if err
     Database.close
