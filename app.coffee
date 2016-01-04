@@ -20,6 +20,9 @@ async.series [
   (cb) -> Database.ProductsFromCsv "products.csv", cb
   (cb) -> Database.ProductsToCsv "products_new.csv", cb
 
+  # generate customers
+  (cb) -> Generate.customers cb
+
   # statistics
   (cb) -> Database.count cb
 
