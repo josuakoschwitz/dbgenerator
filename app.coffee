@@ -22,6 +22,7 @@ async.series [
 
   # generate customers
   (cb) -> Generate.customers cb
+  (cb) -> Database.CustomersToCsv "customers.csv", cb
 
   # statistics
   (cb) -> Database.count cb

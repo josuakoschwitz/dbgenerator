@@ -57,3 +57,10 @@ Database.ProductsToCsv = (path, cb) ->
     return cb err if err
     Csv.writeFile path, data, 'utf8', (err) -> cb err
 
+
+#––– Customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+Database.CustomersToCsv = (path, cb) ->
+  Customers.allExport (err, data) ->
+    return cb err if err
+    Csv.writeFile path, data, 'utf8', (err) -> cb err
