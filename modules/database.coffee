@@ -1,66 +1,75 @@
 Database = module.exports
 
 ### libraries ###
-fs = require "fs"
-async = require "async"
+_ = require "underscore"
 
 ### modules ###
 Csv = require "./csv"
-Customers = require "./database/customers"
-Distribution = require "./database/distribution"
-Orders = require "./database/orders"
-OrderDetails = require "./database/orderdetails"
-Products = require "./database/products"
+
+### private variables ###
+products = new Array()
+customers = new Array()
 
 
-#––– general database operations –––––––––––––––––––––––––––––––––––––––––––––––
+#––– Products –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.clear = (cb) ->
-  fs.truncate "sales.db", 0, cb
+# ProductID INTEGER PRIMARY KEY,
+# CategoryID INTEGER,
+# SubCategoryID INTEGER,
+# BrandID INTEGER,
+# ProductName VARCHAR(50),
+# UnitPrice DECIMAL(5,2)
 
-Database.init = (cb) ->
-  # use async.js only to collect errors
-  async.series [
-    (cb) -> Customers.createTable cb
-    (cb) -> Distribution.createTable cb
-    (cb) -> Orders.createTable cb
-    (cb) -> OrderDetails.createTable cb
-    (cb) -> Products.createTable cb
-  ], (err) -> cb err
-
-Database.count = (cb) ->
-  Products.count (err, amount) ->
-    console.log "Products: #{amount}"
-    cb err
-
-Database.close = (cb) ->
-  # use async.js only to collect errors
-  async.series [
-    (cb) -> Customers.closeDatabase cb
-    (cb) -> Distribution.closeDatabase cb
-    (cb) -> Orders.closeDatabase cb
-    (cb) -> OrderDetails.closeDatabase cb
-    (cb) -> Products.closeDatabase cb
-  ], (err) -> cb err
-
-
-#––– Products ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+Database.ProductsCount = (cb) ->
+  console.log products.length
 
 Database.ProductsFromCsv = (path, cb) ->
   Csv.readFile path, 'utf8', (err, data) ->
     return cb err if err
-    Products.create data, (err) ->
-      cb err
+    products = data
+    return cb null
 
 Database.ProductsToCsv = (path, cb) ->
-  Products.all (err, data) ->
-    return cb err if err
-    Csv.writeFile path, data, 'utf8', (err) -> cb err
+  Csv.writeFile path, products, 'utf8', (err) -> cb err
 
 
 #––– Customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+# CustomerID INTEGER PRIMARY KEY,
+# Name VARCHAR(50),
+# FirstName VARCHAR(50),
+# City VARCHAR(50),
+# PostalCode VARCHAR(5),
+# State VARCHAR(25),
+# Country VARCHAR(25)
+
+Database.addCustomers = (data, cb) ->
+  customers = data
+  cb null
+
 Database.CustomersToCsv = (path, cb) ->
-  Customers.allExport (err, data) ->
-    return cb err if err
-    Csv.writeFile path, data, 'utf8', (err) -> cb err
+  Csv.writeFile path, customers, 'utf8', (err) -> cb err
+
+
+#––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+# OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
+# CustomerID INTEGER,
+# DistributionChannelID INTEGER,
+# OrderDate DATE
+
+
+#––– Order Details –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+# OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
+# OrderID INTEGER,
+# ProductID INTEGER,
+# Quantity INTEGER,
+# UnitPrice DECIMAL(5,2),
+# Discount REAL DEFAULT 0
+
+
+#––– Distribution Channel ––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+# DistributionChannelID INTEGER PRIMARY KEY AUTOINCREMENT,
+# DistributionChannelName VARCHAR(50)

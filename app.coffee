@@ -12,22 +12,17 @@ Database = require "./modules/database"
 
 async.series [
 
-  # preparing database
-  (cb) -> Database.clear cb
-  (cb) -> Database.init cb
-
   # products 2 db / not used. just for me experimenting with sqlite
   (cb) -> Database.ProductsFromCsv "products.csv", cb
-  (cb) -> Database.ProductsToCsv "products_new.csv", cb
+  (cb) -> Database.ProductsToCsv "output/products.csv", cb
 
   # generate customers
   (cb) -> Generate.customers cb
-  (cb) -> Database.CustomersToCsv "customers.csv", cb
+  (cb) -> Database.CustomersToCsv "output/customers.csv", cb
+  (cb) -> console.log "helloooo"; cb null
 
   # statistics
-  (cb) -> Database.count cb
+  (cb) -> Database.ProductsCount cb
 
-  ], (err) ->
-    console.log err if err
-    Database.close
+  ], (err) -> console.log err if err
 

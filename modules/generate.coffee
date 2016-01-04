@@ -5,7 +5,7 @@ _ = require "underscore"
 async = require "async"
 
 ### modules ###
-Customers = require "./database/customers"
+Database = require "./database"
 
 ### configs ###
 config =
@@ -34,5 +34,5 @@ createSomeCustomers = (count, cb) ->
 Generate.customers = (cb) ->
   createSomeCustomers config.customers.count, (err, customers) ->
     return cb err if err
-    Customers.create customers, cb
+    Database.addCustomers customers, cb
 

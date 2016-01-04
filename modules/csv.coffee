@@ -24,9 +24,10 @@ csv.readFile = (path, encoding, cb) ->
 
 # cb = (err) ->
 csv.writeFile = (path, data, encoding, cb) ->
-  # write head
-  tmp = _.map data[0], (v, k) -> "\"#{k}\""
-  string = tmp.join(';') + '\n'
+  string = new String()
+  # write head ---> disabled because the new version uses only arrays
+  # tmp = _.map data[0], (v, k) -> "\"#{k}\""
+  # string = tmp.join(';') + '\n'
   # write content
   for row in data
     tmp = _.map row, (v, k) ->
