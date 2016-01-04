@@ -1,0 +1,10 @@
+{
+  "count": 10000,
+  "min-age": 18,
+  "max-age": 70,
+  "group": {
+    "family": {},
+    "athletic": {},
+    "outdoor": {}
+  }
+}

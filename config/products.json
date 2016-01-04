@@ -1,0 +1,20 @@
+{
+  "preferences-group": {
+    "family": {},
+    "athletic": {},
+    "outdoor": {}
+  },
+  "preferences-sex": {
+    "female": {},
+    "male": {}
+  },
+  "preferences-age": {
+    "20+": {},
+    "30+": {},
+    "50+": {}
+  },
+  "correlation": {
+    "1": {},
+    "2": {}
+  }
+}
