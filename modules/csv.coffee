@@ -2,6 +2,7 @@ csv = module.exports
 
 ### libraries ###
 fs = require 'fs'
+_ = require 'underscore'
 
 
 #––– csv io ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -21,3 +22,16 @@ csv.readFile = (path, encoding, cb) ->
           .trim()
     cb null, table
 
+# cb = (err) ->
+csv.writeFile = (path, data, encoding, cb) ->
+  # write head
+  tmp = _.map data[0], (v, k) -> "\"#{k}\""
+  string = tmp.join(';') + '\n'
+  # write content
+  for row in data
+    tmp = _.map row, (v, k) ->
+      return "#{v}" if _.isNumber v
+      return "#{v}" if v.match /\d\d\.\d\d\.\d\d\d\d\./
+      return "\"#{v}\""
+    string += tmp.join(';') + '\n'
+  fs.writeFile path, string, encoding, cb

@@ -18,6 +18,10 @@ async.series [
 
   # products 2 db / not used. just for me experimenting with sqlite
   (cb) -> Database.ProductsFromCsv "products.csv", cb
+  (cb) -> Database.ProductsToCsv "products_new.csv", cb
+
+  # statistics
+  (cb) -> Database.count cb
 
   ], (err) ->
     console.log err if err

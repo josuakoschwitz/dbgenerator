@@ -14,13 +14,22 @@ Database.clear = (cb) ->
 Database.init = (cb) ->
   Products.createTable cb
 
+Database.count = (cb) ->
+  Products.count (err, amount) ->
+    console.log "Products: #{amount}"
+    cb err
+
 Database.close = (cb) ->
   Products.closeDatabase cb
 
 Database.ProductsFromCsv = (path, cb) ->
   Csv.readFile path, 'utf8', (err, data) ->
     return cb err if err
-    console.log data
     Products.create data, (err) ->
       cb err
+
+Database.ProductsToCsv = (path, cb) ->
+  Products.all (err, data) ->
+    return cb err if err
+    Csv.writeFile path, data, 'utf8', (err) -> cb err
 

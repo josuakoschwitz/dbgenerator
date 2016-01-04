@@ -36,3 +36,12 @@ Products.create = (data, cb) ->
     stmt.run row, cb
   , cb
 
+# cb = (err, rows)
+Products.all = (cb) ->
+  db.all "SELECT * FROM Products ORDER BY ProductID", cb
+
+# cb = (err, amount)
+Products.count = (cb) ->
+  db.all "SELECT count(*) AS amount FROM Products", (err, data) ->
+    cb err, data[0].amount
+
