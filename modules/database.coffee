@@ -21,7 +21,7 @@ customers = new Array()
 # UnitPrice DECIMAL(5,2)
 
 Database.ProductsCount = (cb) ->
-  console.log products.length
+  console.log "Products: #{products.length}"
 
 Database.ProductsFromCsv = (path, cb) ->
   Csv.readFile path, 'utf8', (err, data) ->

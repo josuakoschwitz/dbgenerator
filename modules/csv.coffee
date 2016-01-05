@@ -31,6 +31,7 @@ csv.writeFile = (path, data, encoding, cb) ->
   # write content
   for row in data
     tmp = _.map row, (v, k) ->
+      return null unless v?
       return "#{v}" if _.isNumber v
       return "#{v}" if v.match /\d\d\.\d\d\.\d\d\d\d\./
       return "\"#{v}\""
