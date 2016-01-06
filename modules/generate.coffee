@@ -52,7 +52,7 @@ choseByProbability = (data) ->
 
 #––– random dates ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-randomDate = () ->
+randomBirthday = () ->
   # age range
   index = choseByProbability config.customers.age15to80
   fromAge = index * 5 + 20
@@ -75,7 +75,7 @@ createOneCustomer = (id, cb) ->
   country = 'Deutschland'
 
   # grouping customers
-  birthDay = randomDate()
+  birthDay = randomBirthday()
   _agegroup = ''
   _group = ''
 
@@ -86,7 +86,7 @@ createSomeCustomers = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
   async.times count, (n, next) ->
     bar.tick 1
-    createOneCustomer n, next
+    createOneCustomer n+1, next
   , (err, customers) ->
     cb err, customers
 
@@ -98,8 +98,45 @@ Generate.customers = (cb) ->
 
 #––– generate orders –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+# OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
+# CustomerID INTEGER,
+# DistributionChannelID INTEGER,
+# OrderDate DATE
+
+# OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
+# OrderID INTEGER,
+# ProductID INTEGER,
+# Quantity INTEGER,
+# UnitPrice DECIMAL(5,2),
+# Discount REAL DEFAULT 0
+
+createOneOrder = (OrderId, cb) ->
+
+  # TODO … make this less random
+  # for now uniformly distributed
+  CustomerID = Math.floor Math.random() * config.customers.count + 1
+
+  # TODO
+  # for now defaul { 1: e-shop }
+  DistributionChanellID = 1
+
+  # TODO
+  # for now simply one random day in the last five years
+  randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
+  OrderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
+
+  # return
+  cb null, ORDERID: OrderId, CUSTOMERID: CustomerID, DISTRIBUTIONCHANELLID: DistributionChanellID, ORDERDATE: OrderDate
+
+createSomeOrders = (count, cb) ->
+  bar = new ProgressBar '╢:bar╟ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
+  async.times count, (n, next) ->
+    bar.tick 1
+    createOneOrder n+1, next
+  , (err, orders) ->
+    cb err, orders
+
 Generate.orders = (cb) ->
-  cb null
-
-
-#––– generate order details ––––––––––––––––––––––––––––––––––––––––––––––––––––
+  createSomeOrders config.orders.count, (err, orders) ->
+    return cb err if err
+    Database.addOrders orders, cb
