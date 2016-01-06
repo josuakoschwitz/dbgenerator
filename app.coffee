@@ -16,9 +16,12 @@ async.series [
   # (cb) -> Database.ProductsFromCsv "products.csv", cb
   # (cb) -> Database.ProductsToCsv "output/products.csv", cb
 
-  # generate customers
-  (cb) -> do Generate.prepare; cb null
+  # generate
+  (cb) -> Generate.prepare(); cb null
   (cb) -> Generate.customers cb
+  (cb) -> Generate.orders cb
+
+  # write
   (cb) -> Database.CustomersToCsv "output/customers.csv", cb
 
   ], (err) -> console.log err if err

@@ -5,7 +5,7 @@ fs = require 'fs'
 _ = require 'underscore'
 
 
-#––– csv io ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 # cb = (err, data-array) ->
 csv.readFile = (path, encoding, cb) ->
@@ -22,18 +22,28 @@ csv.readFile = (path, encoding, cb) ->
           .trim()
     cb null, table
 
+
+#––– write –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+getColumns = (data) ->
+  _.keys _.pick data[0], (v, k) -> k[0] isnt "_"
+
 # cb = (err) ->
 csv.writeFile = (path, data, encoding, cb) ->
-  string = new String()
-  # write head ---> disabled because the new version uses only arrays
-  # tmp = _.map data[0], (v, k) -> "\"#{k}\""
-  # string = tmp.join(';') + '\n'
+  # prepare
+  keys = getColumns data
+
+  # write head
+  tmp = _.map keys, (key) -> "\"#{key}\""
+  string = tmp.join(';') + '\n'
+
   # write content
   for row in data
-    tmp = _.map row, (v, k) ->
-      return null unless v?
-      return "#{v}" if _.isNumber v
-      return "#{v}" if v.match /\d\d\.\d\d\.\d\d\d\d\./
-      return "\"#{v}\""
+    tmp = _.map keys, (key) ->
+      value = row[key]
+      return null unless value?
+      return "#{value}" if _.isNumber value
+      return value.format "{d}.{M}.{yyyy}" if _.isDate value
+      return "\"#{value}\""
     string += tmp.join(';') + '\n'
   fs.writeFile path, string, encoding, cb

@@ -2,6 +2,7 @@ Generate = module.exports
 
 ### libraries ###
 _ = require "underscore"
+sugar = require "sugar"
 async = require "async"
 ProgressBar = require "progress"
 
@@ -27,52 +28,62 @@ names =
   female: require "../config/names/female.json"
   male:   require "../config/names/male.json"
 
+### geodata ###
+# http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
 
 
-#––– names –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– probability distribution ––––––––––––––––––––––––––––––––––––––––––––––––––
 
-prepareNames = (obj) ->
+normalizeProbability = (obj) ->
   sum = 0
   obj = _.mapObject obj, (val, key) -> sum += val
   obj = _.mapObject obj, (val, key) -> val / sum
 
 Generate.prepare = ->
-  names.family = prepareNames names.family
-  names.female = prepareNames names.female
-  names.male = prepareNames names.male
+  names.family = normalizeProbability names.family
+  names.female = normalizeProbability names.female
+  names.male = normalizeProbability names.male
+  config.customers.age15to80 = normalizeProbability config.customers.age15to80
 
-buildName = (cb) ->
-  # family name
+choseByProbability = (data) ->
   rand = Math.random()
-  name = _.findKey names.family, (value) -> value > rand
-  # title
-  title = if Math.random() < 0.5 then "Frau" else "Herr"
-  # first name
-  rand = Math.random()
-  if title is "Frau"
-    firstName = _.findKey names.female, (value) -> value > rand
-  else
-    firstName = _.findKey names.male, (value) -> value > rand
-  # result
-  cb null, title, name, firstName
+  _.findKey data, (value) -> value > rand
 
-# Generate.createSomeNames = ->
-#   async.times 20, (n, cb) ->
-#     getName (result...) -> cb null, result
-#   , (err, results) -> console.log results
 
-#––– generate customers ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– random dates ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+randomDate = () ->
+  # age range
+  index = choseByProbability config.customers.age15to80
+  fromAge = index * 5 + 20
+  # random date
+  randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
+  return Date.create().beginningOfYear().addYears(-fromAge).addDays(randomDays)
 
 createOneCustomer = (id, cb) ->
-  buildName (err, title, name, firstName) ->
-    city = 'Musterstadt'
-    postalCode = '00000'
-    state = 'mitteldeutschland'
-    country = 'Deutschland'
-    cb null, [id, title, name, firstName, city, postalCode, state, country]
+  # name
+  title = if Math.random() < 0.5 then "Frau" else "Herr"
+  name = choseByProbability names.family
+  firstName = choseByProbability names.female if title is "Frau"
+  firstName = choseByProbability names.male if title is "Herr"
+
+  # location  (distribution: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
+  title = if Math.random() < 0.5 then "Frau" else "Herr"
+  postalCode = '00000'
+  city = 'Chemnitz'
+  state = 'Sachen'
+  country = 'Deutschland'
+
+  # grouping customers
+  birthDay = randomDate()
+  _agegroup = ''
+  _group = ''
+
+  # return
+  cb null, ID: id, TITLE: title, NAME: name, FIRSTNAME: firstName, CITY: city, POSTALCODE: postalCode, STATE: state, COUNTRY: country, BIRTHDAY: birthDay, _AGEGROUP: _agegroup, _GROUP: _group
 
 createSomeCustomers = (count, cb) ->
-  bar = new ProgressBar ':bar :current users (:etas)', complete: '▓', incomplete: '░', total: count
+  bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
   async.times count, (n, next) ->
     bar.tick 1
     createOneCustomer n, next
@@ -84,3 +95,11 @@ Generate.customers = (cb) ->
     return cb err if err
     Database.addCustomers customers, cb
 
+
+#––– generate orders –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+Generate.orders = (cb) ->
+  cb null
+
+
+#––– generate order details ––––––––––––––––––––––––––––––––––––––––––––––––––––
