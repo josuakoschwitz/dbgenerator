@@ -8,6 +8,15 @@ ProgressBar = require "progress"
 ### modules ###
 Database = require "./database"
 
+
+#––– data –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+### configs ###
+config =
+  customers: require "../config/customers.json"
+  orders: require "../config/orders.json"
+  products: require "../config/products.json"
+
 ### names ###
 # copyright by Deron Meranda
 # source: http://deron.meranda.us/data/census-dist-2500-last.txt
@@ -18,11 +27,6 @@ names =
   female: require "../config/names/female.json"
   male:   require "../config/names/male.json"
 
-### configs ###
-config =
-  buy: require "../config/buy.json"
-  customers: require "../config/customers.json"
-  products: require "../config/products.json"
 
 
 #––– names –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
