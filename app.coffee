@@ -23,6 +23,8 @@ async.series [
 
   # write
   (cb) -> Database.CustomersToCsv "output/customers.csv", cb
+  (cb) -> Database.OrdersToCsv "output/oders.csv", cb
+  (cb) -> Database.OrderDetailsToCsv "output/oderdetails.csv", cb
 
   ], (err) -> console.log err if err
 

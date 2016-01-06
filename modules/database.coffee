@@ -7,18 +7,13 @@ _ = require "underscore"
 Csv = require "./csv"
 
 ### private variables ###
-products = new Array()
-customers = new Array()
+products = new Object()
+customers = new Object()
+orders = new Object()
+orderDetails = new Object()
 
 
 #––– Products –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-# ProductID INTEGER PRIMARY KEY,
-# CategoryID INTEGER,
-# SubCategoryID INTEGER,
-# BrandID INTEGER,
-# ProductName VARCHAR(50),
-# UnitPrice DECIMAL(5,2)
 
 Database.ProductsCount = (cb) ->
   console.log "Products: #{products.length}"
@@ -35,14 +30,6 @@ Database.ProductsToCsv = (path, cb) ->
 
 #––– Customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-# CustomerID INTEGER PRIMARY KEY,
-# Name VARCHAR(50),
-# FirstName VARCHAR(50),
-# City VARCHAR(50),
-# PostalCode VARCHAR(5),
-# State VARCHAR(25),
-# Country VARCHAR(25)
-
 Database.addCustomers = (data, cb) ->
   customers = data
   cb null
@@ -53,23 +40,19 @@ Database.CustomersToCsv = (path, cb) ->
 
 #––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-# OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
-# CustomerID INTEGER,
-# DistributionChannelID INTEGER,
-# OrderDate DATE
+Database.addOrders = (data, cb) ->
+  orders = data
+  cb null
+
+Database.OrdersToCsv = (path, cb) ->
+  Csv.writeFile path, orders, 'utf8', (err) -> cb err
 
 
 #––– Order Details –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-# OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
-# OrderID INTEGER,
-# ProductID INTEGER,
-# Quantity INTEGER,
-# UnitPrice DECIMAL(5,2),
-# Discount REAL DEFAULT 0
+Database.addOrderDetails = (data, cb) ->
+  orderDetails = data
+  cb null
 
-
-#––– Distribution Channel ––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-# DistributionChannelID INTEGER PRIMARY KEY AUTOINCREMENT,
-# DistributionChannelName VARCHAR(50)
+Database.OrderDetailsToCsv = (path, cb) ->
+  Csv.writeFile path, orderDetails, 'utf8', (err) -> cb err
