@@ -14,9 +14,9 @@ Database = require "./database"
 # source: http://deron.meranda.us/data/census-dist-female-first.txt
 # source: http://deron.meranda.us/data/census-dist-male-first.txt
 names =
-  family: require "../source/family-names.json"
-  female: require "../source/female-names.json"
-  male: require "../source/male-names.json"
+  family: require "../config/names/family.json"
+  female: require "../config/names/female.json"
+  male:   require "../config/names/male.json"
 
 ### configs ###
 config =
