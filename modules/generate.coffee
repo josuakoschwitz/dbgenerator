@@ -75,13 +75,13 @@ createOneCustomer = (id, cb) ->
   country = 'Deutschland'
 
   # grouping customers
-  birthDay = randomBirthday()
+  birthday = randomBirthday()
   _agegroup = ''
   _group = ''
-  _retail = 0.2 # TODO dependig on distance to retail stores
+  _retail = 0.2 # TODO dependig on distance to retail stores … collect users near the retail
 
   # return
-  cb null, ID: id, TITLE: title, NAME: name, FIRSTNAME: firstName, CITY: city, POSTALCODE: postalCode, STATE: state, COUNTRY: country, BIRTHDAY: birthDay, _AGEGROUP: _agegroup, _GROUP: _group, _RETAIL: _retail
+  cb null, CustomerId: id, Title: title, Name: name, FirstName: firstName, City: city, PostalCode: postalCode, State: state, Country: country, Birthday: birthday, _agegroup: _agegroup, _group: _group, _retail: _retail
 
 createSomeCustomers = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
@@ -99,31 +99,43 @@ Generate.customers = (cb) ->
 
 #––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-# OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
-# OrderID INTEGER,
-# ProductID INTEGER,
-# Quantity INTEGER,
-# UnitPrice DECIMAL(5,2),
-# Discount REAL DEFAULT 0
-createSomeOrderDetails = (customer) ->
+createSomeOrderDetails = (orderId, customer) ->
   # TODO
+  # for now randomly
+  count = Math.floor Math.random() * 3 + 1
+  # create
+  async.times count, (n, next) ->
+    # TODO
+    # for now randomly
+    productId = Math.floor Math.random() * 64 + 1
+    # TODO
+    # for now randomly
+    quantity = Math.floor Math.random() * 1.2 + 1
+    # TODO
+    # first load products
+    unitPrice = 0
+    discount = 0
+    next null, OrderDetailId: undefined, OrderId:orderId, ProductId: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
+  , (err, orderDetails) ->
+    return cb err if err
+    Database.addOrderDetails orderDetails, (err) ->
+      console.log err if err
 
 createOneOrder = (orderId, cb) ->
-
   # TODO
   # for now: pure random
   # plan: every customer from the fist to the last exactly once
   #       customers buy again after a while
   #       maybe some further input is needed (in the config file)
   customerId = Math.floor Math.random() * config.customers.count + 1
-  createSomeOrderDetails customerId
   customer = Database.getCustomer customerId
+  createSomeOrderDetails orderId, customer
 
   # TODO
   # for now: default { 1: e-shop }
   # plan: depending on config.orders.buy_distribution
   #       and/or on the location of the customer
-  distributionChanellId = 1
+  distributionChannelId = 1
 
   # TODO
   # for now: simply one random day in the last five years
@@ -132,7 +144,7 @@ createOneOrder = (orderId, cb) ->
   orderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
 
   # return
-  cb null, ORDERID: orderId, CUSTOMERID: customerId, DISTRIBUTIONCHANELLID: distributionChanellId, ORDERDATE: orderDate
+  cb null, OrderId: orderId, CustomerId: customerId, DistributionChannelId: distributionChannelId, OrderDate: orderDate
 
 createSomeOrders = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count

@@ -54,8 +54,15 @@ Database.ordersToCsv = (path, cb) ->
 #––– Order Details –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 Database.addOrderDetails = (data, cb) ->
-  orderDetails = orderDetails.concat data
+  # make a single OrderDetail to an array
+  data = [data] unless _.isArray data
+  # manage IDs automatically inside this function
+  nextId = orderDetails[orderDetails.length-1]?.OrderDetailId + 1 or 1
+  row.OrderDetailId = nextId + i for row, i in data
+  # save
+  orderDetails = orderDetails.concat _.extend data
   cb null
 
 Database.orderDetailsToCsv = (path, cb) ->
+  # console.log orderDetails
   Csv.writeFile path, orderDetails, 'utf8', (err) -> cb err
