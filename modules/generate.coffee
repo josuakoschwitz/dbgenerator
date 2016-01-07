@@ -112,8 +112,8 @@ createSomeOrderDetails = (orderId, customer) ->
     # for now randomly
     quantity = Math.floor Math.random() * 1.2 + 1
     # TODO
-    # first load products
-    unitPrice = 0
+    # change csv.readFile to output an array of objects
+    unitPrice = Database.getProduct( productId )[5]
     discount = 0
     next null, OrderDetailId: undefined, OrderId:orderId, ProductId: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
   , (err, orderDetails) ->

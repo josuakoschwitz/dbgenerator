@@ -24,6 +24,9 @@ Database.productsFromCsv = (path, cb) ->
     products = data
     return cb null
 
+Database.getProduct = (productId) ->
+  _.clone products[productId-1]
+
 Database.productsToCsv = (path, cb) ->
   Csv.writeFile path, products, 'utf8', (err) -> cb err
 

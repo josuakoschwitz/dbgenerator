@@ -12,8 +12,8 @@ Database = require "./modules/database"
 
 async.series [
 
-  # products 2 db / not used. just for me experimenting with sqlite
-  # (cb) -> Database.productsFromCsv "products.csv", cb
+  # products 2 db (needed for OrderDetails / UnitPrice)
+  (cb) -> Database.productsFromCsv "products.csv", cb
   # (cb) -> Database.productsToCsv "output/products.csv", cb
 
   # generate
