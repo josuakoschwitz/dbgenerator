@@ -50,7 +50,7 @@ choseByProbability = (data) ->
   _.findKey data, (value) -> value > rand
 
 
-#––– random dates ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 randomBirthday = () ->
   # age range
@@ -69,7 +69,7 @@ createOneCustomer = (id, cb) ->
 
   # location  (distribution: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
   title = if Math.random() < 0.5 then "Frau" else "Herr"
-  postalCode = '00000'
+  postalCode = '09126'
   city = 'Chemnitz'
   state = 'Sachen'
   country = 'Deutschland'
@@ -78,9 +78,10 @@ createOneCustomer = (id, cb) ->
   birthDay = randomBirthday()
   _agegroup = ''
   _group = ''
+  _retail = 0.2 # TODO dependig on distance to retail stores
 
   # return
-  cb null, ID: id, TITLE: title, NAME: name, FIRSTNAME: firstName, CITY: city, POSTALCODE: postalCode, STATE: state, COUNTRY: country, BIRTHDAY: birthDay, _AGEGROUP: _agegroup, _GROUP: _group
+  cb null, ID: id, TITLE: title, NAME: name, FIRSTNAME: firstName, CITY: city, POSTALCODE: postalCode, STATE: state, COUNTRY: country, BIRTHDAY: birthDay, _AGEGROUP: _agegroup, _GROUP: _group, _RETAIL: _retail
 
 createSomeCustomers = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
@@ -96,12 +97,7 @@ Generate.customers = (cb) ->
     Database.addCustomers customers, cb
 
 
-#––– generate orders –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-# OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
-# CustomerID INTEGER,
-# DistributionChannelID INTEGER,
-# OrderDate DATE
+#––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 # OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
 # OrderID INTEGER,
@@ -109,24 +105,34 @@ Generate.customers = (cb) ->
 # Quantity INTEGER,
 # UnitPrice DECIMAL(5,2),
 # Discount REAL DEFAULT 0
+createSomeOrderDetails = (customer) ->
+  # TODO
 
-createOneOrder = (OrderId, cb) ->
-
-  # TODO … make this less random
-  # for now uniformly distributed
-  CustomerID = Math.floor Math.random() * config.customers.count + 1
+createOneOrder = (orderId, cb) ->
 
   # TODO
-  # for now defaul { 1: e-shop }
-  DistributionChanellID = 1
+  # for now: pure random
+  # plan: every customer from the fist to the last exactly once
+  #       customers buy again after a while
+  #       maybe some further input is needed (in the config file)
+  customerId = Math.floor Math.random() * config.customers.count + 1
+  createSomeOrderDetails customerId
+  customer = Database.getCustomer customerId
 
   # TODO
-  # for now simply one random day in the last five years
+  # for now: default { 1: e-shop }
+  # plan: depending on config.orders.buy_distribution
+  #       and/or on the location of the customer
+  distributionChanellId = 1
+
+  # TODO
+  # for now: simply one random day in the last five years
+  # plan: depending on config.orders.buy_month
   randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
-  OrderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
+  orderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
 
   # return
-  cb null, ORDERID: OrderId, CUSTOMERID: CustomerID, DISTRIBUTIONCHANELLID: DistributionChanellID, ORDERDATE: OrderDate
+  cb null, ORDERID: orderId, CUSTOMERID: customerId, DISTRIBUTIONCHANELLID: distributionChanellId, ORDERDATE: orderDate
 
 createSomeOrders = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count

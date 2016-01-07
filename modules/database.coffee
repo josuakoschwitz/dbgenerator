@@ -7,52 +7,55 @@ _ = require "underscore"
 Csv = require "./csv"
 
 ### private variables ###
-products = new Object()
-customers = new Object()
-orders = new Object()
-orderDetails = new Object()
+products = new Array()
+customers = new Array()
+orders = new Array()
+orderDetails = new Array()
 
 
 #––– Products –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.ProductsCount = (cb) ->
+Database.productsCount = (cb) ->
   console.log "Products: #{products.length}"
 
-Database.ProductsFromCsv = (path, cb) ->
+Database.productsFromCsv = (path, cb) ->
   Csv.readFile path, 'utf8', (err, data) ->
     return cb err if err
     products = data
     return cb null
 
-Database.ProductsToCsv = (path, cb) ->
+Database.productsToCsv = (path, cb) ->
   Csv.writeFile path, products, 'utf8', (err) -> cb err
 
 
 #––– Customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 Database.addCustomers = (data, cb) ->
-  customers = data
+  customers = customers.concat data
   cb null
 
-Database.CustomersToCsv = (path, cb) ->
+Database.getCustomer = (customerId) ->
+  _.clone customers[customerId-1]
+
+Database.customersToCsv = (path, cb) ->
   Csv.writeFile path, customers, 'utf8', (err) -> cb err
 
 
 #––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 Database.addOrders = (data, cb) ->
-  orders = data
+  orders = orders.concat data
   cb null
 
-Database.OrdersToCsv = (path, cb) ->
+Database.ordersToCsv = (path, cb) ->
   Csv.writeFile path, orders, 'utf8', (err) -> cb err
 
 
 #––– Order Details –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 Database.addOrderDetails = (data, cb) ->
-  orderDetails = data
+  orderDetails = orderDetails.concat data
   cb null
 
-Database.OrderDetailsToCsv = (path, cb) ->
+Database.orderDetailsToCsv = (path, cb) ->
   Csv.writeFile path, orderDetails, 'utf8', (err) -> cb err
