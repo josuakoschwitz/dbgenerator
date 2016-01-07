@@ -60,8 +60,8 @@ Database.addOrderDetails = (data, cb) ->
   # make a single OrderDetail to an array
   data = [data] unless _.isArray data
   # manage IDs automatically inside this function
-  nextId = orderDetails[orderDetails.length-1]?.OrderDetailId + 1 or 1
-  row.OrderDetailId = nextId + i for row, i in data
+  nextID = orderDetails[orderDetails.length-1]?.OrderDetailID + 1 or 1
+  row.OrderDetailID = nextID + i for row, i in data
   # save
   orderDetails = orderDetails.concat _.extend data
   cb null

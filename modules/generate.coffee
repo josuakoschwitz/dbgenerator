@@ -81,7 +81,7 @@ createOneCustomer = (id, cb) ->
   _retail = 0.2 # TODO dependig on distance to retail stores … collect users near the retail
 
   # return
-  cb null, CustomerId: id, Title: title, Name: name, FirstName: firstName, City: city, PostalCode: postalCode, State: state, Country: country, Birthday: birthday, _agegroup: _agegroup, _group: _group, _retail: _retail
+  cb null, CustomerID: id, Title: title, Name: name, FirstName: firstName, PostalCode: postalCode, City: city, State: state, Country: country, Birthday: birthday, _agegroup: _agegroup, _group: _group, _retail: _retail
 
 createSomeCustomers = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
@@ -115,7 +115,7 @@ createSomeOrderDetails = (orderId, customer) ->
     # change csv.readFile to output an array of objects
     unitPrice = Database.getProduct( productId )[5]
     discount = 0
-    next null, OrderDetailId: undefined, OrderId:orderId, ProductId: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
+    next null, OrderDetailID: undefined, OrderID:orderId, ProductID: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
   , (err, orderDetails) ->
     return cb err if err
     Database.addOrderDetails orderDetails, (err) ->
@@ -144,7 +144,7 @@ createOneOrder = (orderId, cb) ->
   orderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
 
   # return
-  cb null, OrderId: orderId, CustomerId: customerId, DistributionChannelId: distributionChannelId, OrderDate: orderDate
+  cb null, OrderID: orderId, CustomerID: customerId, DistributionChannelID: distributionChannelId, OrderDate: orderDate
 
 createSomeOrders = (count, cb) ->
   bar = new ProgressBar '╢:bar╟ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
