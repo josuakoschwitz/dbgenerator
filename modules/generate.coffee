@@ -24,9 +24,9 @@ config =
 # source: http://deron.meranda.us/data/census-dist-female-first.txt
 # source: http://deron.meranda.us/data/census-dist-male-first.txt
 names =
-  family: require "../config/names/family.json"
-  female: require "../config/names/female.json"
-  male:   require "../config/names/male.json"
+  family: require "../input/names/family.json"
+  female: require "../input/names/female.json"
+  male:   require "../input/names/male.json"
 
 ### geodata ###
 # http://www.fa-technik.adfc.de/code/opengeodb/DE.tab

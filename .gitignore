@@ -1,4 +1,5 @@
 node_modules/
 output/*
-config/geodata/DE.tab
-config/geodata/de.csv
+output_etl/*
+input/geodata/DE.tab
+input/geodata/DE.csv
