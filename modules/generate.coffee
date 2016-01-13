@@ -76,6 +76,9 @@ createOneCustomer = (id, cb) ->
   city = 'Chemnitz'
   state = 'Sachen'
   country = 'Deutschland'
+  latitude = 50.8333
+  longitude = 12.9167
+
 
   # grouping customers
   birthday = randomBirthday()
@@ -84,9 +87,24 @@ createOneCustomer = (id, cb) ->
   _retail = 0.2 # TODO dependig on distance to retail stores … collect users near the retail
 
   # return
-  cb null, CustomerID: id, Title: title, Name: name, FirstName: firstName, PostalCode: postalCode, City: city, State: state, Country: country, Birthday: birthday, _agegroup: _agegroup, _group: _group, _retail: _retail
+  cb null,
+    CustomerID: id
+    Title: title
+    Name: name
+    FirstName: firstName
+    Birthday: birthday
+    PostalCode: postalCode
+    City: city
+    State: state
+    Country: country
+    latitude: latitude
+    longitude: longitude
+    _agegroup: _agegroup
+    _group: _group
+    _retail: _retail
 
-createSomeCustomers = (count, cb) ->
+createSomeCustomers = (count
+  cb) ->
   bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
   async.times count, (n, next) ->
     bar.tick 1

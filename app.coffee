@@ -21,10 +21,18 @@ async.series [
   (cb) -> Generate.customers cb
   (cb) -> Generate.orders cb
 
-  # write
-  (cb) -> Database.customer.exportCsv "output/customers.csv", cb
+  # write before ETL
+  # (cb) -> Database.customer.exportCsv "output/customers.csv", cb
   (cb) -> Database.order.exportCsv "output/oders.csv", cb
   (cb) -> Database.orderDetail.exportCsv "output/oderdetails.csv", cb
+
+  # ETL
+  # (cb) -> Database.orderDetail.joinOrder cb null
+  # (cb) -> Database.orderDetail.splitDate cb null
+
+  # write after ETL
+  (cb) -> Database.customer.exportCsv "output_etl/customers.csv", cb
+  # (cb) -> Database.orderDetail.exportCsv "output_etl/oderdetails.csv", cb
 
   ], (err) -> console.log err if err
 
