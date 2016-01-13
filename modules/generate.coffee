@@ -32,7 +32,7 @@ names =
 # http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
 
 
-#––– probability distribution ––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 normalizeProbability = (obj) ->
   sum = 0
@@ -94,7 +94,7 @@ createSomeCustomers = (count, cb) ->
 Generate.customers = (cb) ->
   createSomeCustomers config.customers.count, (err, customers) ->
     return cb err if err
-    Database.addCustomers customers, cb
+    Database.customer.create customers, cb
 
 
 #––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -113,12 +113,12 @@ createSomeOrderDetails = (orderId, customer) ->
     quantity = Math.floor Math.random() * 1.2 + 1
     # TODO
     # change csv.readFile to output an array of objects
-    unitPrice = Database.getProduct( productId )[5]
+    unitPrice = Database.product.get( productId )[5]
     discount = 0
     next null, OrderDetailID: undefined, OrderID:orderId, ProductID: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
   , (err, orderDetails) ->
     return cb err if err
-    Database.addOrderDetails orderDetails, (err) ->
+    Database.orderDetail.create orderDetails, (err) ->
       console.log err if err
 
 createOneOrder = (orderId, cb) ->
@@ -128,7 +128,7 @@ createOneOrder = (orderId, cb) ->
   #       customers buy again after a while
   #       maybe some further input is needed (in the config file)
   customerId = Math.floor Math.random() * config.customers.count + 1
-  customer = Database.getCustomer customerId
+  customer = Database.customer.get customerId
   createSomeOrderDetails orderId, customer
 
   # TODO
@@ -157,4 +157,4 @@ createSomeOrders = (count, cb) ->
 Generate.orders = (cb) ->
   createSomeOrders config.orders.count, (err, orders) ->
     return cb err if err
-    Database.addOrders orders, cb
+    Database.order.create orders, cb

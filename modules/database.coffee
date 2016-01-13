@@ -7,65 +7,77 @@ _ = require "underscore"
 Csv = require "./csv"
 
 ### private variables ###
-products = new Array()
-customers = new Array()
-orders = new Array()
-orderDetails = new Array()
+product = new Array()
+customer = new Array()
+order = new Array()
+orderDetail = new Array()
 
 
-#––– Products –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.productsCount = (cb) ->
-  console.log "Products: #{products.length}"
 
-Database.productsFromCsv = (path, cb) ->
-  Csv.readFile path, 'utf8', (err, data) ->
+
+
+#––– Product –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+Database.product = {}
+
+Database.product.count = (cb) ->
+  cb null, product.length
+
+Database.product.importCsv = (path, cb) ->
+  Csv.readFile path, 'utf8', ';', (err, data) ->
     return cb err if err
-    products = data
+    product = data
     return cb null
 
-Database.getProduct = (productId) ->
-  _.clone products[productId-1]
+Database.product.get = (productId) ->
+  _.clone product[productId-1]
 
-Database.productsToCsv = (path, cb) ->
-  Csv.writeFile path, products, 'utf8', (err) -> cb err
+Database.product.exportCsv = (path, cb) ->
+  Csv.writeFile path, product, 'utf8', (err) -> cb err
 
 
-#––– Customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– Customer ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.addCustomers = (data, cb) ->
-  customers = customers.concat data
+Database.customer = {}
+
+Database.customer.create = (data, cb) ->
+  customer = customer.concat data
   cb null
 
-Database.getCustomer = (customerId) ->
-  _.clone customers[customerId-1]
+Database.customer.get = (customerId) ->
+  _.clone customer[customerId-1]
 
-Database.customersToCsv = (path, cb) ->
-  Csv.writeFile path, customers, 'utf8', (err) -> cb err
+Database.customer.exportCsv = (path, cb) ->
+  Csv.writeFile path, customer, 'utf8', (err) -> cb err
 
 
 #––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.addOrders = (data, cb) ->
-  orders = orders.concat data
+Database.order = {}
+
+Database.order.create = (data, cb) ->
+  order = order.concat data
   cb null
 
-Database.ordersToCsv = (path, cb) ->
-  Csv.writeFile path, orders, 'utf8', (err) -> cb err
+Database.order.exportCsv = (path, cb) ->
+  Csv.writeFile path, order, 'utf8', (err) -> cb err
 
 
-#––– Order Details –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– Order Detail ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Database.addOrderDetails = (data, cb) ->
+Database.orderDetail = {}
+
+Database.orderDetail.create = (data, cb) ->
   # make a single OrderDetail to an array
   data = [data] unless _.isArray data
   # manage IDs automatically inside this function
-  nextID = orderDetails[orderDetails.length-1]?.OrderDetailID + 1 or 1
+  nextID = orderDetail[orderDetail.length-1]?.OrderDetailID + 1 or 1
   row.OrderDetailID = nextID + i for row, i in data
   # save
-  orderDetails = orderDetails.concat _.extend data
+  orderDetail = orderDetail.concat _.extend data
   cb null
 
-Database.orderDetailsToCsv = (path, cb) ->
-  # console.log orderDetails
-  Csv.writeFile path, orderDetails, 'utf8', (err) -> cb err
+Database.orderDetail.exportCsv = (path, cb) ->
+  Csv.writeFile path, orderDetail, 'utf8', (err) -> cb err

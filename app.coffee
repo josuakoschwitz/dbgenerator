@@ -12,9 +12,8 @@ Database = require "./modules/database"
 
 async.series [
 
-  # products 2 db (needed for OrderDetails / UnitPrice)
-  (cb) -> Database.productsFromCsv "products.csv", cb
-  # (cb) -> Database.productsToCsv "output/products.csv", cb
+  # load needed tables
+  (cb) -> Database.product.importCsv "input/products.csv", cb
 
   # generate
   (cb) -> Generate.prepare(); cb null
@@ -22,9 +21,9 @@ async.series [
   (cb) -> Generate.orders cb
 
   # write
-  (cb) -> Database.customersToCsv "output/customers.csv", cb
-  (cb) -> Database.ordersToCsv "output/oders.csv", cb
-  (cb) -> Database.orderDetailsToCsv "output/oderdetails.csv", cb
+  (cb) -> Database.customer.exportCsv "output/customers.csv", cb
+  (cb) -> Database.order.exportCsv "output/oders.csv", cb
+  (cb) -> Database.orderDetail.exportCsv "output/oderdetails.csv", cb
 
   ], (err) -> console.log err if err
 
