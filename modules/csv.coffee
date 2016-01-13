@@ -8,12 +8,12 @@ _ = require 'underscore'
 #––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 # cb = (err, data-array) ->
-csv.readFile = (path, encoding, cb) ->
+csv.readFile = (path, encoding, seperator, cb) ->
   fs.readFile path, encoding, (err, data) ->
     cb err if err
     table = data.split /[\r\n]+/
     table = for row in table when row.length > 0
-      row = row.split ';'
+      row = row.split seperator # TODO: matching does not yet ignore escaped seperators or seperators inside strings
       row = for item, i in row
         item = item
           .replace /^"(.+)"$/, '$1'

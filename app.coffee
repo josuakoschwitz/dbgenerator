@@ -14,6 +14,7 @@ async.series [
 
   # load needed tables
   (cb) -> Database.product.importCsv "input/products.csv", cb
+  # (cb) -> Database.location.importCsv "input/location.csv", cb
 
   # generate
   (cb) -> Generate.prepare(); cb null

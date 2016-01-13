@@ -28,8 +28,11 @@ names =
   female: require "../input/names/female.json"
   male:   require "../input/names/male.json"
 
-### geodata ###
+### locations ###
 # http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
+locations =
+  state: undefined
+  city: undefined
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
