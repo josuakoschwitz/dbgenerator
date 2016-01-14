@@ -135,7 +135,16 @@ createSomeOrderDetails = (orderId, customer) ->
     # change csv.readFile to output an array of objects
     unitPrice = Database.product.get( productId )[5]
     discount = 0
-    next null, OrderDetailID: undefined, OrderID:orderId, ProductID: productId, Quantity: quantity, UnitPrice: unitPrice, Discount: discount
+    next null,
+      OrderDetailID: undefined,
+      OrderID:orderId,
+      ProductID: productId,
+      Quantity: quantity,
+      UnitPrice: unitPrice,
+      Discount: discount
+      # OrderID;CustomerID;DistributionChannelID;OrderDate_D;OrderDate_M;OrderDate_Y
+      UnitOfMeasure: "ST"
+      CURRENCY: "EUR"
   , (err, orderDetails) ->
     return cb err if err
     Database.orderDetail.create orderDetails, (err) ->

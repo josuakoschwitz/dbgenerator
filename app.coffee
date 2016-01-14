@@ -35,4 +35,3 @@ async.series [
   (cb) -> Database.orderComplete.exportCsv "output_etl/oderscomplete.csv", cb
 
   ], (err) -> console.log err if err
-
