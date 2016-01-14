@@ -22,13 +22,13 @@ async.series [
   (cb) -> Generate.orders cb
 
   # write before ETL
+  # (cb) -> Database.product.exportCsv "output/products.csv", cb
   # (cb) -> Database.customer.exportCsv "output/customers.csv", cb
   (cb) -> Database.order.exportCsv "output/oders.csv", cb
   (cb) -> Database.orderDetail.exportCsv "output/oderdetails.csv", cb
 
   # ETL
   (cb) -> Database.orderComplete.createFromJoin cb
-  # (cb) -> Database.orderDetail.splitDate cb null
 
   # write after ETL
   (cb) -> Database.customer.exportCsv "output_etl/customers.csv", cb

@@ -97,8 +97,7 @@ createOneCustomer = (id, cb) ->
     City: city
     State: state
     Country: country
-    latitude: latitude
-    longitude: longitude
+    Coordinate: [latitude, longitude]
     _agegroup: _agegroup
     _group: _group
     _retail: _retail

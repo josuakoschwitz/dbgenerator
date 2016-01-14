@@ -32,6 +32,19 @@ csv.readFile = (opts, cb) ->
 getColumns = (data) ->
   _.keys _.pick data[0], (v, k) -> k[0] isnt "_"
 
+# getTypes = (data) ->
+#   keymap = {}
+#   _.each data, (column) ->
+#     _.each column, (value, key) ->
+#       if _.isNumber(value) or ( _.isString(value) and value.match(/^\d+\.?\d*$/) )
+#         type = Number
+#       else if _.isDate(value) or ( _.isString(value) and value.match(/^\d+\.\d+\.\d+$/) )
+#         type = Date
+#       else
+#         type = String
+#       keymap[key] = type unless keymap[key]
+#       keymap[key] = String if keymap[key] isnt type
+
 # cb = (err) ->
 csv.writeFile = (data, opts, cb) ->
   # set defaults
@@ -48,16 +61,16 @@ csv.writeFile = (data, opts, cb) ->
   string = tmp.join(opts.seperator) + '\n'
   string = string.replace /([^\"]*Date[^\"]*)/i, "$1_D\"#{opts.seperator}\"$1_M\"#{opts.seperator}\"$1_Y" if opts.splitDate
 
-  console.log opts
-
   # write content
   for row in data
     tmp = _.map keys, (key) ->
       value = row[key]
       return null unless value?
-      return "#{value}" if _.isNumber value or _.isString value and value.match /\d+\.?\d*/
+      return "#{value}" if _.isNumber value
       return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
-      return value.format "{d}.{M}.{yyyy}" if _.isDate value
+      return value.format "{d}.{M}.{yyyy}" if _.isDate(value)
+      return "[#{value}]" if _.isArray(value)
+      value.replace "\"", "\"\""
       return "\"#{value}\""
     string += tmp.join(opts.seperator) + '\n'
   fs.writeFile opts.path, string, opts.encoding, cb
