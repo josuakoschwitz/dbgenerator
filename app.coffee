@@ -27,12 +27,12 @@ async.series [
   (cb) -> Database.orderDetail.exportCsv "output/oderdetails.csv", cb
 
   # ETL
-  # (cb) -> Database.orderDetail.joinOrder cb null
+  (cb) -> Database.orderComplete.createFromJoin cb
   # (cb) -> Database.orderDetail.splitDate cb null
 
   # write after ETL
   (cb) -> Database.customer.exportCsv "output_etl/customers.csv", cb
-  # (cb) -> Database.orderDetail.exportCsv "output_etl/oderdetails.csv", cb
+  (cb) -> Database.orderComplete.exportCsv "output_etl/oderscomplete.csv", cb
 
   ], (err) -> console.log err if err
 

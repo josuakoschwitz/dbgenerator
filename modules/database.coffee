@@ -7,10 +7,11 @@ _ = require "underscore"
 Csv = require "./csv"
 
 ### private variables ###
-product = new Array()
-customer = new Array()
-order = new Array()
-orderDetail = new Array()
+tableProduct = new Array()
+tableCustomer = new Array()
+tableOrder = new Array()
+tableOrderDetail = new Array()
+tableOrderComplete = new Array()
 
 
 #––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -23,19 +24,19 @@ orderDetail = new Array()
 Database.product = {}
 
 Database.product.count = (cb) ->
-  cb null, product.length
+  cb null, tableProduct.length
 
 Database.product.importCsv = (path, cb) ->
-  Csv.readFile path, 'utf8', ';', (err, data) ->
+  Csv.readFile path:path, (err, data) ->
     return cb err if err
-    product = data
+    tableProduct = data
     return cb null
 
 Database.product.get = (productId) ->
-  _.clone product[productId-1]
+  _.clone tableProduct[productId-1]
 
 Database.product.exportCsv = (path, cb) ->
-  Csv.writeFile path, product, 'utf8', (err) -> cb err
+  Csv.writeFile tableProduct, path:path, (err) -> cb err
 
 
 #––– Customer ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -43,14 +44,14 @@ Database.product.exportCsv = (path, cb) ->
 Database.customer = {}
 
 Database.customer.create = (data, cb) ->
-  customer = customer.concat data
+  tableCustomer = tableCustomer.concat data
   cb null
 
 Database.customer.get = (customerId) ->
-  _.clone customer[customerId-1]
+  _.clone tableCustomer[customerId-1]
 
 Database.customer.exportCsv = (path, cb) ->
-  Csv.writeFile path, customer, 'utf8', (err) -> cb err
+  Csv.writeFile tableCustomer, path:path, (err) -> cb err
 
 
 #––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -58,11 +59,11 @@ Database.customer.exportCsv = (path, cb) ->
 Database.order = {}
 
 Database.order.create = (data, cb) ->
-  order = order.concat data
+  tableOrder = tableOrder.concat data
   cb null
 
 Database.order.exportCsv = (path, cb) ->
-  Csv.writeFile path, order, 'utf8', (err) -> cb err
+  Csv.writeFile tableOrder, path:path, (err) -> cb err
 
 
 #––– Order Detail ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -73,11 +74,25 @@ Database.orderDetail.create = (data, cb) ->
   # make a single OrderDetail to an array
   data = [data] unless _.isArray data
   # manage IDs automatically inside this function
-  nextID = orderDetail[orderDetail.length-1]?.OrderDetailID + 1 or 1
+  nextID = tableOrderDetail[tableOrderDetail.length-1]?.OrderDetailID + 1 or 1
   row.OrderDetailID = nextID + i for row, i in data
   # save
-  orderDetail = orderDetail.concat _.extend data
+  tableOrderDetail = tableOrderDetail.concat _.extend data
   cb null
 
 Database.orderDetail.exportCsv = (path, cb) ->
-  Csv.writeFile path, orderDetail, 'utf8', (err) -> cb err
+  Csv.writeFile tableOrderDetail, path:path, (err) -> cb err
+
+
+#––– Order Complete ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+Database.orderComplete = {}
+
+Database.orderComplete.createFromJoin = (cb) ->
+  tableOrderComplete = tableOrderComplete.concat _.map tableOrderDetail, (orderDetailRow) ->
+    orderRow = _.clone tableOrder[ orderDetailRow.OrderID - 1 ]
+    _.extend orderRow, orderDetailRow
+  cb null
+
+Database.orderComplete.exportCsv = (path, cb) ->
+  Csv.writeFile tableOrderComplete, path:path, splitDate:true, (err) -> cb err
