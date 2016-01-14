@@ -66,10 +66,14 @@ csv.writeFile = (data, opts, cb) ->
     tmp = _.map keys, (key) ->
       value = row[key]
       return null unless value?
-      return "#{value}" if _.isNumber value
+      return "#{value}" if _.isNumber(value) or _.isString(value) and value.match(/^\d+(\.\d+)?$/)
       return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
       return value.format "{d}.{M}.{yyyy}" if _.isDate(value)
-      return "[#{value}]" if _.isArray(value)
+      # geo point
+      return "POINT(#{value.join(' ')})" if _.isArray(value)
+      # enum
+      return "#{value}" if _.isString(value) and value in ["EUR", "ST"]
+      # fallback: string
       value.replace "\"", "\"\""
       return "\"#{value}\""
     string += tmp.join(opts.seperator) + '\n'
