@@ -29,7 +29,7 @@ names =
   male:   require "../input/names/male.json"
 
 ### locations ###
-# http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
+# source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
 locations =
   state: undefined
   city: undefined
@@ -47,10 +47,14 @@ Generate.prepare = ->
   names.female = normalizeProbability names.female
   names.male = normalizeProbability names.male
   config.customers.age15to80 = normalizeProbability config.customers.age15to80
+  config.orders.buy_amount = normalizeProbability config.orders.buy_amount
+  config.orders.add_amount = normalizeProbability config.orders.add_amount
 
 choseByProbability = (data) ->
   rand = Math.random()
   _.findKey data, (value) -> value > rand
+
+
 
 
 #––– customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -63,15 +67,39 @@ randomBirthday = () ->
   randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
   return Date.create().beginningOfYear().addYears(-fromAge).addDays(randomDays)
 
+setAgeGroup = (birthday) ->
+  age = Date.create().yearsSince birthday
+  return "51-70" if age > 50
+  return "31-50" if age > 30
+  return "14-30"
+
+randomInterestGroup = ->
+   group = choseByProbability config.customers.group
+
+retailByDistance = (lat1, lon1) ->
+  distances = _.mapObject config.customers.retail_stores, (coordinate, city) ->
+    lat2 = coordinate[0]
+    lon2 = coordinate[1]
+    dx = 111.3 * Math.cos( (lat1+lat2) / 2 / 180 * Math.PI ) * Math.abs( lon1 - lon2 )
+    dy = 111.3 * Math.abs( lat1 - lat2 )
+    Math.sqrt( dx * dx + dy * dy )
+  distance = _.values(distances).reduce (prev, curr) ->
+    if prev < curr then prev else curr
+  # just linear and clamped
+  return 0.8 if distance < 10
+  return 0.1 if distance > 80
+  return 0.9 - 0.01 * distance # if between 10 km and 80 km
+
 createOneCustomer = (id, cb) ->
   # name
   title = if Math.random() < 0.5 then "Frau" else "Herr"
   name = choseByProbability names.family
   firstName = choseByProbability names.female if title is "Frau"
   firstName = choseByProbability names.male if title is "Herr"
+  birthday = randomBirthday()
 
-  # location  (distribution: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
-  title = if Math.random() < 0.5 then "Frau" else "Herr"
+  # location
+  # TODO customer location distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
   postalCode = '09126'
   city = 'Chemnitz'
   state = 'Sachen'
@@ -79,12 +107,14 @@ createOneCustomer = (id, cb) ->
   latitude = 50.8333
   longitude = 12.9167
 
-
   # grouping customers
-  birthday = randomBirthday()
-  _agegroup = ''
-  _group = ''
-  _retail = 0.2 # TODO dependig on distance to retail stores … collect users near the retail
+  _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
+  _group = randomInterestGroup()        # "family", "athletic", "outdoor"
+
+  # probability that this customer buys in a retail store rather than in an eShop
+  # dependig on distance to retail stores
+  _retail = retailByDistance latitude, longitude
+  # _retail = config.customers.buy_channel.retail
 
   # return
   cb null,
@@ -102,9 +132,8 @@ createOneCustomer = (id, cb) ->
     _group: _group
     _retail: _retail
 
-createSomeCustomers = (count
-  cb) ->
-  bar = new ProgressBar '╢:bar╟ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
+createSomeCustomers = (count, cb) ->
+  bar = new ProgressBar '║:bar║ :current Customers (:etas)', complete: '▓', incomplete: '░', total: count
   async.times count, (n, next) ->
     bar.tick 1
     createOneCustomer n+1, next
@@ -117,73 +146,94 @@ Generate.customers = (cb) ->
     Database.customer.create customers, cb
 
 
+
+
 #––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-createSomeOrderDetails = (orderId, customer) ->
-  # TODO
-  # for now randomly
-  count = Math.floor Math.random() * 3 + 1
-  # create
-  async.times count, (n, next) ->
-    # TODO
-    # for now randomly
-    productId = Math.floor Math.random() * 64 + 1
-    # TODO
-    # for now randomly
-    quantity = Math.floor Math.random() * 1.2 + 1
-    # TODO
-    # change csv.readFile to output an array of objects
-    unitPrice = Database.product.get( productId )[5]
-    discount = 0
-    next null,
-      OrderDetailID: undefined,
-      OrderID:orderId,
-      ProductID: productId,
-      Quantity: quantity,
-      UnitPrice: unitPrice,
-      Discount: discount
-      # OrderID;CustomerID;DistributionChannelID;OrderDate_D;OrderDate_M;OrderDate_Y
-      UnitOfMeasure: "ST"
-      CURRENCY: "EUR"
-  , (err, orderDetails) ->
-    return cb err if err
-    Database.orderDetail.create orderDetails, (err) ->
-      console.log err if err
-
 createOneOrder = (orderId, cb) ->
-  # TODO
-  # for now: pure random
-  # plan: every customer from the fist to the last exactly once
-  #       customers buy again after a while
-  #       maybe some further input is needed (in the config file)
-  customerId = Math.floor Math.random() * config.customers.count + 1
+
+  # prepare for order date creation
+  count = config.orders.count
+  totalYears = config.orders.years
+  startDate = Date.create().beginningOfYear().addYears( -totalYears )
+  totalDays = Date.create().beginningOfYear().daysSince( startDate ) - 0.0001
+  # ascending frequency per year
+  growth = config.orders.growth
+  currentPartialYear = Math.log( 1 + orderId / count * ( Math.pow( growth, totalYears ) - 1 )) / Math.log( growth )
+  # write order date
+  day = Math.floor currentPartialYear / totalYears * totalDays
+  orderDate = startDate.addDays( day )
+  # TODO (priority low):    different growth-factors in different years
+  # TODO (priority medium): maky orderDate depending on config.orders.buy_month
+  # TODO (priority medium): make orderDate fuzzy
+
+  # assign customer to order date
+  remainingLeads = config.customers.count - ( config.customers.current_lead - 1)
+  remainingOrders = count - ( orderId - 1 )
+  pConversion = remainingLeads / remainingOrders
+  if pConversion > Math.random()
+    customerId = config.customers.current_lead
+    config.customers.current_lead += 1
+  else
+    customersCount = config.customers.current_lead - 1
+    customerId = Math.floor Math.random() * customersCount + 1
   customer = Database.customer.get customerId
   createSomeOrderDetails orderId, customer
 
-  # TODO
-  # for now: default { 1: e-shop }
-  # plan: depending on config.orders.buy_distribution
-  #       and/or on the location of the customer
-  distributionChannelId = 1
-
-  # TODO
-  # for now: simply one random day in the last five years
-  # plan: depending on config.orders.buy_month
-  randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
-  orderDate = Date.create().beginningOfYear().addYears(-5).addDays(randomDays)
+  # set the distributionChannel (retail / eShop) depending on customer._retail
+  distributionChannelId = if Math.random() > customer._retail then 1 else 0
 
   # return
   cb null, OrderID: orderId, CustomerID: customerId, DistributionChannelID: distributionChannelId, OrderDate: orderDate
 
+
 createSomeOrders = (count, cb) ->
-  bar = new ProgressBar '╢:bar╟ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
+  bar = new ProgressBar '║:bar║ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
   async.times count, (n, next) ->
     bar.tick 1
     createOneOrder n+1, next
   , (err, orders) ->
     cb err, orders
 
+
 Generate.orders = (cb) ->
   createSomeOrders config.orders.count, (err, orders) ->
     return cb err if err
     Database.order.create orders, cb
+
+
+
+
+#––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+createSomeOrderDetails = (orderId, customer) ->
+  # create size of shopping basket
+  buy_amount = choseByProbability config.orders.buy_amount
+  add_amount = choseByProbability config.orders.add_amount
+
+  # initial shopping basket
+  async.times buy_amount, (n, next) ->
+    # TODO
+    # for now randomly
+    productId = Math.floor Math.random() * 64 + 1
+    # TODO
+    # set more realistic quantities in config file
+    quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
+    # pick unitPrice from the Product
+    unitPrice = Database.product.get( productId )[5]
+    # TODO
+    # set an discount depending on dates and increase buy probability accordingly
+    discount = 0
+    next null,
+      OrderDetailID: undefined
+      OrderID: orderId
+      ProductID: productId
+      Quantity: quantity
+      UnitPrice: unitPrice
+      Discount: discount
+      UnitOfMeasure: "ST"
+      CURRENCY: "EUR"
+  , (err, orderDetails) ->
+    return cb err if err
+    Database.orderDetail.create orderDetails, (err) ->
+      console.log err if err
