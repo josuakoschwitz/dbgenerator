@@ -59,7 +59,7 @@ csv.writeFile = (data, opts, cb) ->
   # write head
   tmp = _.map keys, (key) -> "\"#{key}\""
   string = tmp.join(opts.seperator) + '\n'
-  string = string.replace /([^\"]*Date[^\"]*)/i, "$1_D\"#{opts.seperator}\"$1_M\"#{opts.seperator}\"$1_Y" if opts.splitDate
+  # string = string.replace /([^\"]*Date[^\"]*)/i, "$1_D\"#{opts.seperator}\"$1_M\"#{opts.seperator}\"$1_Y" if opts.splitDate
 
   # write content
   for row in data
@@ -67,8 +67,8 @@ csv.writeFile = (data, opts, cb) ->
       value = row[key]
       return null unless value?
       return "#{value}" if _.isNumber(value) or _.isString(value) and value.match(/^\d+(\.\d+)?$/)
-      return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
-      return value.format "{d}.{M}.{yyyy}" if _.isDate(value)
+      # return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
+      return value.format "{yyyy}_{MM}_{dd}" if _.isDate(value)
       # geo point
       return "POINT(#{value.join(' ')})" if _.isArray(value)
       # enum
