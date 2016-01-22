@@ -220,7 +220,12 @@ createShoppingBasket = (customer) ->
 
 extendShoppingBasket = (productIds) ->
   amount = choseByProbability config.orders.add_amount
-  # TODO – for now just pass input
+  return productIds if amount = 0
+  ranking = []
+  for productId in productIds
+    for value, index in config.products.correlation[productId]
+      ranking[index+1] = value + ranking[index+1] or 0
+  # TODO – sort this ranking and take the highest rated products (without doubles) to the basket
   productIds
 
 createOneOrderDetail = (orderId, productId, cb) ->
