@@ -178,14 +178,22 @@ createOneOrder = (orderId, cb) ->
     customersCount = config.customers.current_lead - 1
     customerId = Math.floor Math.random() * customersCount + 1
   customer = Database.customer.get customerId
-  createSomeOrderDetails orderId, customer
 
   # set the distributionChannel (retail / eShop) depending on customer._retail
   distributionChannelId = if Math.random() > customer._retail then 1 else 0
 
-  # return
-  cb null, OrderID: orderId, CustomerID: customerId, DistributionChannelID: distributionChannelId, OrderDate: orderDate
+  # orderDetails
+  createSomeOrderDetails orderId, customer, (err, orderDetails) ->
+    return cb err if err
+    Database.orderDetail.create orderDetails, (err) ->
+      console.log err if err
 
+  # return
+  cb null,
+    OrderID: orderId,
+    CustomerID: customerId,
+    DistributionChannelID: distributionChannelId,
+    OrderDate: orderDate
 
 createSomeOrders = (count, cb) ->
   bar = new ProgressBar '║:bar║ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
@@ -194,7 +202,6 @@ createSomeOrders = (count, cb) ->
     createOneOrder n+1, next
   , (err, orders) ->
     cb err, orders
-
 
 Generate.orders = (cb) ->
   createSomeOrders config.orders.count, (err, orders) ->
@@ -206,34 +213,42 @@ Generate.orders = (cb) ->
 
 #––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-createSomeOrderDetails = (orderId, customer) ->
-  # create size of shopping basket
-  buy_amount = choseByProbability config.orders.buy_amount
-  add_amount = choseByProbability config.orders.add_amount
+createShoppingBasket = (customer) ->
+  amount = choseByProbability config.orders.buy_amount
+  # TODO – for now randomly and without duplicate detection
+  _.map [0...amount], -> productId = Math.floor Math.random() * 64 + 1
 
-  # initial shopping basket
-  async.times buy_amount, (n, next) ->
-    # TODO
-    # for now randomly
-    productId = Math.floor Math.random() * 64 + 1
-    # TODO
-    # set more realistic quantities in config file
-    quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
-    # pick unitPrice from the Product
-    unitPrice = Database.product.get( productId )[5]
-    # TODO
-    # set an discount depending on dates and increase buy probability accordingly
-    discount = 0
-    next null,
-      OrderDetailID: undefined
-      OrderID: orderId
-      ProductID: productId
-      Quantity: quantity
-      UnitPrice: unitPrice
-      Discount: discount
-      UnitOfMeasure: "ST"
-      CURRENCY: "EUR"
+extendShoppingBasket = (productIds) ->
+  amount = choseByProbability config.orders.add_amount
+  # TODO – for now just pass input
+  productIds
+
+createOneOrderDetail = (orderId, productId, cb) ->
+  # TODO (medium priority): set more realistic quantities in the config file
+  quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
+  # pick unitPrice from the Product
+  unitPrice = Database.product.get( productId )[5]
+  # TODO (medium priority): set an discount depending on dates and increase buy probability accordingly
+  discount = 0
+
+  # return
+  cb null,
+    OrderDetailID: undefined
+    OrderID: orderId
+    ProductID: productId
+    Quantity: quantity
+    UnitPrice: unitPrice
+    Discount: discount
+    UnitOfMeasure: "ST"
+    CURRENCY: "EUR"
+
+createSomeOrderDetails = (orderId, customer, cb) ->
+  # select products
+  productIds = createShoppingBasket customer
+  productIds = extendShoppingBasket productIds
+
+  # create order details
+  async.map productIds, (productId, cb) ->
+    createOneOrderDetail orderId, productId, cb
   , (err, orderDetails) ->
-    return cb err if err
-    Database.orderDetail.create orderDetails, (err) ->
-      console.log err if err
+    cb err, orderDetails
