@@ -49,6 +49,7 @@ Generate.prepare = ->
   names.male = normalizeProbability names.male
   # customers
   config.customers.age15to80 = normalizeProbability config.customers.age15to80
+  config.customers.group = normalizeProbability config.customers.group
   # orders
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
   config.orders.add_amount = normalizeProbability config.orders.add_amount
@@ -91,7 +92,7 @@ setAgeGroup = (birthday) ->
   return "14-30"
 
 randomInterestGroup = ->
-   group = choseByProbability config.customers.group
+  choseByProbability config.customers.group
 
 retailByDistance = (lat1, lon1) ->
   distances = _.mapObject config.customers.retail_stores, (coordinate, city) ->
@@ -198,7 +199,7 @@ createOneOrder = (orderId, cb) ->
 
   # assign customer to order date
   remainingLeads = config.customers.count - ( config.customers.current_lead - 1)
-  remainingOrders = count - ( orderId - 1 )
+  remainingOrders = config.orders.count - ( orderId - 1 )
   pConversion = remainingLeads / remainingOrders
   if pConversion > Math.random()
     customerId = config.customers.current_lead
@@ -244,8 +245,16 @@ Generate.orders = (cb) ->
 
 createShoppingBasket = (customer) ->
   amount = choseByProbability config.orders.buy_amount
-  # TODO – for now randomly and without duplicate detection
-  _.map [0...amount], -> productId = Math.floor Math.random() * 64 + 1
+  ranking = _.clone config.products.preferences_group[ customer._group ]
+  ranking = _.map [0...64], (value, index) ->
+    value = config.products.preferences_group[ customer._group ][index] *
+            config.products.preferences_sex[ customer.Title ][index] *
+            config.products.preferences_age[ customer._agegroup ][index] *
+            ( 1 + Math.random() * 0.5 )
+    [index+1, value]
+  ranking = _.sortBy ranking, (value) -> -value[1]
+  ranking = ranking.slice(0, amount)
+  _.map ranking, (value) -> value[0]
 
 extendShoppingBasket = (productIds) ->
   amount = choseByProbability config.orders.add_amount
