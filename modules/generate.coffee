@@ -249,14 +249,18 @@ createShoppingBasket = (customer) ->
 
 extendShoppingBasket = (productIds) ->
   amount = choseByProbability config.orders.add_amount
-  return productIds if amount = 0
+  return productIds if amount is 0
   ranking = []
   for productId in productIds
     for value, index in config.products.correlation[productId]
-      ranking[index+1] = value + ranking[index+1] or 0
-  # TODO – sort this ranking and put the highest rated products (without doubles) to the shopping basket
-
-  productIds
+      ranking[index+1] = value + (ranking[index+1] or 0)
+  ranking = _.map ranking, (value, index) -> [index, value]
+  ranking = _.filter ranking, (value) -> (value[1] not in productIds) and value[1]>0
+  ranking = _.shuffle ranking
+  ranking = _.sortBy ranking, (value) -> -value[1]
+  ranking = ranking.slice(0, amount)
+  ranking = _.map ranking, (value) -> value[0]
+  productIds.concat ranking
 
 createOneOrderDetail = (orderId, productId, cb) ->
   # TODO (medium priority): set more realistic quantities in the config file
