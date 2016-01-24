@@ -43,12 +43,29 @@ normalizeProbability = (obj) ->
   obj = _.mapObject obj, (val, key) -> val / sum
 
 Generate.prepare = ->
+  # names
   names.family = normalizeProbability names.family
   names.female = normalizeProbability names.female
   names.male = normalizeProbability names.male
+  # customers
   config.customers.age15to80 = normalizeProbability config.customers.age15to80
+  # orders
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
   config.orders.add_amount = normalizeProbability config.orders.add_amount
+  # order growth, count
+  prev = 1
+  growth = _.map config.orders.growth, (value) -> prev *= value; prev / value
+  sum = _.reduce growth, (prev, curr) -> prev+curr
+  diff = 0
+  config.orders.countYear = _.map growth, (value) ->
+    tmp = value / sum * config.orders.count + diff
+    count = Math.round tmp
+    diff = tmp - count
+    count
+  sum = 0
+  config.orders.countYearCum = _.map config.orders.countYear, (count) -> sum += count
+  config.orders.offset = 0
+
 
 choseByProbability = (data) ->
   rand = Math.random()
@@ -151,21 +168,33 @@ Generate.customers = (cb) ->
 #––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 createOneOrder = (orderId, cb) ->
-
-  # prepare for order date creation
-  count = config.orders.count
-  totalYears = config.orders.years
-  startDate = Date.create().beginningOfYear().addYears( -totalYears )
-  totalDays = Date.create().beginningOfYear().daysSince( startDate ) - 0.0001
-  # ascending frequency per year
-  growth = config.orders.growth
-  currentPartialYear = Math.log( 1 + orderId / count * ( Math.pow( growth, totalYears ) - 1 )) / Math.log( growth )
-  # write order date
-  day = Math.floor currentPartialYear / totalYears * totalDays
-  orderDate = startDate.addDays( day )
-  # TODO (priority low):    different growth-factors in different years
-  # TODO (priority medium): maky orderDate depending on config.orders.buy_month
-  # TODO (priority medium): make orderDate fuzzy
+  totalYears = config.orders.growth.length
+  # prepare date
+  currentYear = config.orders.countYearCum.findIndex (count) -> orderId <= count
+  startDate = Date.create().beginningOfYear().addYears( currentYear - totalYears )
+  endDate = Date.create().endOfYear().addYears( currentYear - totalYears )
+  days = startDate.daysUntil( endDate )
+  # prepare other parameters depending on the current year
+  growth = config.orders.growth[ currentYear ]
+  count = config.orders.countYear[ currentYear ]
+  orderNumber = orderId - config.orders.countYearCum[ currentYear - 1] or orderId
+  # ascending frequency inside a year
+  currentPartialYear = Math.log( 1 + orderNumber / count * ( growth - 1 )) / Math.log( growth )
+  currentPartialYear = orderNumber / count if growth is 1
+  # make orderDate depending on config.orders.buy_density
+  curve = config.orders.buy_density
+  parts = config.orders.buy_density.length
+  part = Math.floor (orderNumber / count + config.orders.offset) * parts
+  partPartial = (orderNumber / count + config.orders.offset) * parts - part
+  fx = curve[ part % parts ] + partPartial * ( curve[ (part+1) % parts ] - curve[ part % parts ] )
+  d = 1 / count
+  dfx = d / fx
+  config.orders.offset += dfx - d
+  currentPartialYear += config.orders.offset
+  # ... this is not fully correct but it leads to an appropriate result
+  # finally write the day
+  day = Math.floor currentPartialYear * (days - 0.00001)
+  orderDate = startDate.clone().addDays( day )
 
   # assign customer to order date
   remainingLeads = config.customers.count - ( config.customers.current_lead - 1)
@@ -225,7 +254,8 @@ extendShoppingBasket = (productIds) ->
   for productId in productIds
     for value, index in config.products.correlation[productId]
       ranking[index+1] = value + ranking[index+1] or 0
-  # TODO – sort this ranking and take the highest rated products (without doubles) to the basket
+  # TODO – sort this ranking and put the highest rated products (without doubles) to the shopping basket
+
   productIds
 
 createOneOrderDetail = (orderId, productId, cb) ->
