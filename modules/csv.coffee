@@ -68,7 +68,7 @@ csv.writeFile = (data, opts, cb) ->
       return null unless value?
       return "#{value}" if _.isNumber(value) or _.isString(value) and value.match(/^\d+(\.\d+)?$/)
       # return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
-      return value.format "{yyyy}_{MM}_{dd}" if _.isDate(value)
+      return value.format "{yyyy}-{MM}-{dd}" if _.isDate(value)
       # geo point
       return "POINT(#{value.join(' ')})" if _.isArray(value)
       # enum
