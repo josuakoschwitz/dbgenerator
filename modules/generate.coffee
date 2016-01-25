@@ -170,7 +170,7 @@ createOneCustomer = (id, cb) ->
     City: city
     State: state
     Country: country
-    Coordinate: [latitude, longitude]
+    Coordinate: [latitude, longitude, 0]
     _agegroup: _agegroup
     _group: _group
     _retail: _retail

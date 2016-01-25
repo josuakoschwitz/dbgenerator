@@ -70,7 +70,7 @@ csv.writeFile = (data, opts, cb) ->
       # return value.format "{d}#{opts.seperator}{M}#{opts.seperator}{yyyy}" if _.isDate(value) and opts.splitDate
       return value.format "{yyyy}-{MM}-{dd}" if _.isDate(value)
       # geo point
-      return "POINT(#{value.join(' ')})" if _.isArray(value)
+      return "\"#{value.join(';')}\"" if _.isArray(value)
       # enum
       return "#{value}" if _.isString(value) and value in ["EUR", "ST"]
       # fallback: string
