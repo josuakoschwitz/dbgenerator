@@ -30,9 +30,10 @@ names =
 
 ### locations ###
 # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
-locations =
-  state: undefined
-  city: undefined
+locations = require "../input/geodata/example.json"
+population = undefined
+
+
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -47,12 +48,32 @@ Generate.prepare = ->
   names.family = normalizeProbability names.family
   names.female = normalizeProbability names.female
   names.male = normalizeProbability names.male
+
   # customers
   config.customers.age15to80 = normalizeProbability config.customers.age15to80
   config.customers.group = normalizeProbability config.customers.group
+
+  # locations
+  iCity = locations[0].indexOf 'name'
+  iState = locations[0].indexOf 'bundesland'
+  iLat = locations[0].indexOf 'lat'
+  iLon = locations[0].indexOf 'lon'
+  iEw = locations[0].indexOf 'einwohner'
+  iPlz = locations[0].indexOf 'plz'
+  locations = locations.splice(1).map (row) ->
+    city: row[iCity]
+    state: row[iState]
+    lat: Number row[iLat]
+    lon: Number row[iLon]
+    population: Number row[iEw]
+    plz: -> plz = row[iPlz].split ','; id = Math.floor Math.random() * plz.length; plz[id]
+  population = locations.map (row) -> row.population
+  population = normalizeProbability population
+
   # orders
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
   config.orders.add_amount = normalizeProbability config.orders.add_amount
+
   # order growth, count
   prev = 1
   growth = _.map config.orders.growth, (value) -> prev *= value; prev / value
@@ -65,6 +86,7 @@ Generate.prepare = ->
     count
   sum = 0
   config.orders.countYearCum = _.map config.orders.countYear, (count) -> sum += count
+  # *static* variable
   config.orders.offset = 0
 
 
@@ -118,12 +140,15 @@ createOneCustomer = (id, cb) ->
 
   # location
   # TODO customer location distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
-  postalCode = '09126'
-  city = 'Chemnitz'
-  state = 'Sachen'
+  locationId = choseByProbability population
+  location = locations[locationId]
+  # write
+  postalCode = location.plz()
+  city = location.city
+  state = location.state
   country = 'Deutschland'
-  latitude = 50.8333
-  longitude = 12.9167
+  latitude = location.lat
+  longitude = location.lon
 
   # grouping customers
   _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
