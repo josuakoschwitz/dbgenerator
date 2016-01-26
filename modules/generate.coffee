@@ -193,36 +193,9 @@ Generate.customers = (cb) ->
 
 #––– orders ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-createOneOrder = (orderId, cb) ->
-  totalYears = config.orders.growth.length
-  # prepare date
-  currentYear = config.orders.countYearCum.findIndex (count) -> orderId <= count
-  startDate = Date.create().beginningOfYear().addYears( currentYear - totalYears )
-  endDate = Date.create().endOfYear().addYears( currentYear - totalYears )
-  days = startDate.daysUntil( endDate )
-  # prepare other parameters depending on the current year
-  growth = config.orders.growth[ currentYear ]
-  count = config.orders.countYear[ currentYear ]
-  orderNumber = orderId - config.orders.countYearCum[ currentYear - 1] or orderId
-  # ascending frequency inside a year
-  currentPartialYear = Math.log( 1 + orderNumber / count * ( growth - 1 )) / Math.log( growth )
-  currentPartialYear = orderNumber / count if growth is 1
-  # make orderDate depending on config.orders.buy_density
-  curve = config.orders.buy_density
-  parts = config.orders.buy_density.length
-  part = Math.floor (orderNumber / count + config.orders.offset) * parts
-  partPartial = (orderNumber / count + config.orders.offset) * parts - part
-  fx = curve[ part % parts ] + partPartial * ( curve[ (part+1) % parts ] - curve[ part % parts ] )
-  d = 1 / count
-  dfx = d / fx
-  config.orders.offset += dfx - d
-  currentPartialYear += config.orders.offset
-  # ... this is not fully correct but it leads to an appropriate result
-  # finally write the day
-  day = Math.floor currentPartialYear * (days - 0.00001)
-  orderDate = startDate.clone().addDays( day )
+createOneOrder = (orderId, orderDate, cb) ->
 
-  # assign customer to order date
+  # choose customer
   remainingLeads = config.customers.count - ( config.customers.current_lead - 1)
   remainingOrders = config.orders.count - ( orderId - 1 )
   pConversion = remainingLeads / remainingOrders
@@ -235,33 +208,97 @@ createOneOrder = (orderId, cb) ->
   customer = Database.customer.get customerId
 
   # set the distributionChannel (retail / eShop) depending on customer._retail
-  distributionChannelId = if Math.random() > customer._retail then 1 else 0
+  if Math.random() < customer._retail and orderDate.isWeekday()
+    distributionChannelId = 0 # retail
+  else
+    distributionChannelId = 1 # eShop
 
-  # orderDetails
-  createSomeOrderDetails orderId, customer, (err, orderDetails) ->
-    return cb err if err
-    Database.orderDetail.create orderDetails, (err) ->
-      console.log err if err
-
-  # return
-  cb null,
+  # add Order to Database
+  order =
     OrderID: orderId,
     CustomerID: customerId,
     DistributionChannelID: distributionChannelId,
     OrderDate: orderDate
+  Database.order.create order, (err) -> return cb err if err
 
-createSomeOrders = (count, cb) ->
-  bar = new ProgressBar '║:bar║ :current Orders (:etas)', complete: '▓', incomplete: '░', total: count
-  async.times count, (n, next) ->
-    bar.tick 1
-    createOneOrder n+1, next
-  , (err, orders) ->
-    cb err, orders
+  # create orderDetails to that order
+  createSomeOrderDetails orderId, customer, (err, orderDetails) ->
+    return cb err if err
+    Database.orderDetail.create orderDetails, (err) ->
+      console.log err if err
+  cb null
+
+
+createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
+  # create orders
+  for orderId in [orderIdOffset...orderIdOffset+=count]
+    createOneOrder orderId, date, (err) -> return cb err if err
+  cb null
+
+
+createSomeOrders = (totalCount, cb) ->
+  # date init
+  totalYears = config.orders.growth.length
+  startDate = Date.create().beginningOfYear().addYears( -totalYears )
+
+  # helper function
+  normalizeArray = (array, total) ->
+    sum = _.reduce array, (prev, curr) -> prev + curr
+    diff = 0
+    _.map array, (value) ->
+      tmp = value / sum * total + diff
+      count = Math.round tmp
+      diff = tmp - count
+      count
+
+  # make growth relative to the start date
+  growth = config.orders.growth
+  prev = 1
+  growthMultipl = _.map growth, (fac) -> prev *= fac
+  prev = 1
+  parts = _.map growthMultipl, (fac) -> part=(fac+prev)/2; prev=fac; part
+  countYearly = normalizeArray parts, totalCount
+
+  # split count into days
+  countsYearly = _.map countYearly, (count, year) ->
+    start = startDate.clone().addYears( year )
+    end = startDate.clone().addYears( year ).endOfYear()
+    days = start.daysUntil( end )
+    parts = [0...days].map (day) ->
+      # ascending frequency (linear interpolation should be enough)
+      part = 1 + day / days * ( growth[year] - 1 )
+      # depending on config.orders.buy_density
+      months = config.orders.buy_density.length
+      monthFull = (day+0.5) / days * months
+      month = Math.floor monthFull
+      monthPart = monthFull - month
+      curve = config.orders.buy_density
+      saisonFactor = curve[ month % months ] * (1 - monthPart)  +  curve[ (month+1) % months ] * monthPart
+      part *= saisonFactor
+      # ± fuzzy
+      part *= Math.random() * 2 * config.orders.buy_fuzzy + (1 - config.orders.buy_fuzzy)
+      # return
+      part
+    # map count to days
+    normalizeArray parts, count
+
+  # join all days into one timeline and run order creation day-to-day
+  countsOverall = _.flatten countsYearly
+  bar = new ProgressBar '║:bar║ :current Orders (:etas)', complete: '▓', incomplete: '░', total: totalCount
+  orderIdOffset = 1
+  # run order creation
+  for count, day in countsOverall
+    date = startDate.clone().addDays( day )
+    bar.tick count
+    createSomeOrdersAt orderIdOffset, count, date, (err) -> return cb err if err
+    orderIdOffset += count
+  cb null
+
 
 Generate.orders = (cb) ->
-  createSomeOrders config.orders.count, (err, orders) ->
+  createSomeOrders config.orders.count, (err) ->
     return cb err if err
-    Database.order.create orders, cb
+    cb null
 
 
 

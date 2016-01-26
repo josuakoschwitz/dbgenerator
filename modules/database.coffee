@@ -44,7 +44,7 @@ Database.product.exportCsv = (path, cb) ->
 Database.customer = {}
 
 Database.customer.create = (data, cb) ->
-  tableCustomer = tableCustomer.concat data
+  tableCustomer.push.apply tableCustomer, data
   cb null
 
 Database.customer.get = (customerId) ->
@@ -59,7 +59,7 @@ Database.customer.exportCsv = (path, cb) ->
 Database.order = {}
 
 Database.order.create = (data, cb) ->
-  tableOrder = tableOrder.concat data
+  tableOrder.push data
   cb null
 
 Database.order.exportCsv = (path, cb) ->
@@ -77,7 +77,7 @@ Database.orderDetail.create = (data, cb) ->
   nextID = tableOrderDetail[tableOrderDetail.length-1]?.OrderDetailID + 1 or 1
   row.OrderDetailID = nextID + i for row, i in data
   # save
-  tableOrderDetail = tableOrderDetail.concat _.extend data
+  tableOrderDetail.push.apply tableOrderDetail, data
   cb null
 
 Database.orderDetail.exportCsv = (path, cb) ->
