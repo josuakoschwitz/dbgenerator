@@ -230,6 +230,14 @@ createOneOrder = (orderId, orderDate, cb) ->
 
 
 createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
+  # check each day if to start a discount-campaign
+  month = date.getMonth()
+  if Math.random() < config.orders.discount_date[ month ] / 30
+    discount = choseByProbability config.orders.discount_value
+    volume = Math.floor count * config.orders.discount_duration * config.orders.discount_volume[ month ]
+    # config.orders.discount_campaign
+    # console.log date.format("{yyyy}-{MM}-{dd}"), "| discount: #{discount} | volume: #{volume}"
+
   # create orders
   for orderId in [orderIdOffset...orderIdOffset+=count]
     createOneOrder orderId, date, (err) -> return cb err if err
