@@ -44,16 +44,17 @@ normalizeProbability = (obj) ->
   obj = _.mapObject obj, (val, key) -> val / sum
 
 Generate.prepare = ->
-  # names
+
+  # customers / groups
+  config.customers.age15to80 = normalizeProbability config.customers.age15to80
+  config.customers.group = normalizeProbability config.customers.group
+
+  # customers / names
   names.family = normalizeProbability names.family
   names.female = normalizeProbability names.female
   names.male = normalizeProbability names.male
 
-  # customers
-  config.customers.age15to80 = normalizeProbability config.customers.age15to80
-  config.customers.group = normalizeProbability config.customers.group
-
-  # locations
+  # customers / locations
   iCity = locations[0].indexOf 'name'
   iState = locations[0].indexOf 'bundesland'
   iLat = locations[0].indexOf 'lat'
@@ -70,25 +71,12 @@ Generate.prepare = ->
   population = locations.map (row) -> row.population
   population = normalizeProbability population
 
-  # orders
+  # orders / shopping basket
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
   config.orders.add_amount = normalizeProbability config.orders.add_amount
 
-  # order growth, count
-  prev = 1
-  growth = _.map config.orders.growth, (value) -> prev *= value; prev / value
-  sum = _.reduce growth, (prev, curr) -> prev+curr
-  diff = 0
-  config.orders.countYear = _.map growth, (value) ->
-    tmp = value / sum * config.orders.count + diff
-    count = Math.round tmp
-    diff = tmp - count
-    count
-  sum = 0
-  config.orders.countYearCum = _.map config.orders.countYear, (count) -> sum += count
-  # *static* variable
-  config.orders.offset = 0
-
+  # products / discount
+  config.products.discount = _(64).times -> {discount: 0, days: 0}
 
 choseByProbability = (data) ->
   rand = Math.random()
@@ -209,9 +197,9 @@ createOneOrder = (orderId, orderDate, cb) ->
 
   # set the distributionChannel (retail / eShop) depending on customer._retail
   if Math.random() < customer._retail and orderDate.isWeekday()
-    distributionChannelId = 0 # retail
+    distributionChannelId = 1 # retail
   else
-    distributionChannelId = 1 # eShop
+    distributionChannelId = 2 # eShop
 
   # add Order to Database
   order =
@@ -230,13 +218,27 @@ createOneOrder = (orderId, orderDate, cb) ->
 
 
 createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
-  # check each day if to start a discount-campaign
   month = date.getMonth()
-  if Math.random() < config.orders.discount_date[ month ] / 30
-    discount = choseByProbability config.orders.discount_value
-    volume = Math.floor count * config.orders.discount_duration * config.orders.discount_volume[ month ]
-    # config.orders.discount_campaign
-    # console.log date.format("{yyyy}-{MM}-{dd}"), "| discount: #{discount} | volume: #{volume}"
+
+  # check each day if to start a campaign
+  if Math.random() < config.orders.campaign_prob[ month ] / 30
+    campaign = choseByProbability config.orders.campaign_value
+    volume = Math.floor count * config.orders.campaign_duration * config.orders.campaign_volume[ month ]
+    # config.orders.campaigns =
+    # console.log date.format("{yyyy}-{MM}-{dd}"), "| campaign: #{campaign} | volume: #{volume}"
+
+  # change discount of all products
+  config.products.discount = config.products.discount.map (actualDiscount) ->
+    # set a discount
+    if Math.random() < config.orders.discount_prob[ month ] / 30
+      min = config.orders.discount_min[ month ]
+      max = config.orders.discount_max[ month ]
+      days = config.orders.discount_duration
+      discount = (Math.round ( Math.random() * (max-min) + min ) * 100) / 100
+    else
+      days = actualDiscount.days - 1
+      discount = if days > 0 then actualDiscount.discount else 0.0
+    days: days, discount: discount
 
   # create orders
   for orderId in [orderIdOffset...orderIdOffset+=count]
@@ -284,7 +286,7 @@ createSomeOrders = (totalCount, cb) ->
       saisonFactor = curve[ month % months ] * (1 - monthPart)  +  curve[ (month+1) % months ] * monthPart
       part *= saisonFactor
       # ± fuzzy
-      part *= Math.random() * 2 * config.orders.buy_fuzzy + (1 - config.orders.buy_fuzzy)
+      part *= Math.random() * config.orders.buy_fuzzy_daily + 1
       # return
       part
     # map count to days
@@ -316,8 +318,8 @@ Generate.orders = (cb) ->
 createShoppingBasket = (customer) ->
   amount = choseByProbability config.orders.buy_amount
   ranking = _.clone config.products.preferences_group[ customer._group ]
-  ranking = _.map [0...64], (value, index) ->
-    value = config.products.preferences_group[ customer._group ][index] *
+  ranking = _.map config.products.preferences, (value, index) ->
+    value *= config.products.preferences_group[ customer._group ][index] *
             config.products.preferences_sex[ customer.Title ][index] *
             config.products.preferences_age[ customer._agegroup ][index] *
             ( 1 + Math.random() * 0.5 )
@@ -334,7 +336,7 @@ extendShoppingBasket = (productIds) ->
     for value, index in config.products.correlation[productId]
       ranking[index+1] = value + (ranking[index+1] or 0)
   ranking = _.map ranking, (value, index) -> [index, value]
-  ranking = _.filter ranking, (value) -> (value[1] not in productIds) and value[1]>0
+  ranking = _.filter ranking, (VALUE) -> (value[1] not in productIds) and value[1]>0
   ranking = _.shuffle ranking
   ranking = _.sortBy ranking, (value) -> -value[1]
   ranking = ranking.slice(0, amount)
@@ -356,7 +358,7 @@ createOneOrderDetail = (orderId, productId, cb) ->
     ProductID: productId
     Quantity: quantity
     UnitPrice: unitPrice
-    Discount: discount
+    Discount: config.products.discount[ productId-1 ].discount
     UnitOfMeasure: "ST"
     CURRENCY: "EUR"
 
