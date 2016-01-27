@@ -24,13 +24,13 @@ config =
 # source: http://deron.meranda.us/data/census-dist-female-first.txt
 # source: http://deron.meranda.us/data/census-dist-male-first.txt
 names =
-  family: require "../input/names/family.json"
-  female: require "../input/names/female.json"
-  male:   require "../input/names/male.json"
+  family: require "../data/names/family.json"
+  female: require "../data/names/female.json"
+  male:   require "../data/names/male.json"
 
 ### locations ###
 # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
-locations = require "../input/geodata/example.json"
+locations = require "../data/geodata/example.json"
 population = undefined
 
 

@@ -17,7 +17,7 @@ cell = (row, key) -> row[ data[0].indexOf key ]
 
 #––– run –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Csv.readFile path:"input/geodata/DE.tab", seperator:/\t/, (err, result) ->
+Csv.readFile path:"data/geodata/DE.tab", seperator:/\t/, (err, result) ->
   data = result
 
   # select …
@@ -35,11 +35,11 @@ Csv.readFile path:"input/geodata/DE.tab", seperator:/\t/, (err, result) ->
   # filter typ: "Verwaltungsgemeinschaft", '#loc_id': "290"
   # validateParent()
 
-  writeFile data, 'input/geodata/de.json'
+  writeFile data, 'data/geodata/de.json'
 
   # write back
   selectColumns "name", "lat", "lon", "einwohner", "plz"
-  writeFile data, 'input/geodata/example2.json' # set example to not overwrite example.json
+  writeFile data, 'data/geodata/example2.json' # set example to not overwrite example.json
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
