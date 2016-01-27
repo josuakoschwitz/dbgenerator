@@ -134,6 +134,7 @@ createOneCustomer = (id, cb) ->
   postalCode = location.plz()
   city = location.city
   state = location.state
+  plzGroup = postalCode[0]
   country = 'Deutschland'
   latitude = location.lat
   longitude = location.lon
@@ -157,6 +158,7 @@ createOneCustomer = (id, cb) ->
     PostalCode: postalCode
     City: city
     State: state
+    PlzGroup: plzGroup
     Country: country
     Coordinate: [latitude, longitude, 0]
     _agegroup: _agegroup
