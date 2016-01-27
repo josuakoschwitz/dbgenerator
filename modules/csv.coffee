@@ -5,6 +5,16 @@ fs = require 'fs'
 _ = require 'underscore'
 
 
+#––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+fs.exists 'data/output', (exists) ->
+  unless exists
+    fs.mkdir 'data/output', (err) ->
+      console.error err if err
+
+
+
+
 #––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 # cb = (err, data-array) ->
