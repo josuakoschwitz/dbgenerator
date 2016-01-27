@@ -91,7 +91,7 @@ Database.orderComplete = {}
 Database.orderComplete.createFromJoin = (cb) ->
   tableOrderComplete = tableOrderComplete.concat _.map tableOrderDetail, (orderDetailRow) ->
     orderRow = _.clone tableOrder[ orderDetailRow.OrderID - 1 ]
-    _.pick _.extend( orderRow, orderDetailRow ), "OrderDetailID","CustomerID","DistributionChannelID","OrderDate","ProductID","Quantity","UnitPrice","Discount","UnitOfMeasure","CURRENCY"
+    _.pick _.extend( orderRow, orderDetailRow ), "OrderDetailID", "OrderID", "CustomerID","DistributionChannelID","OrderDate","ProductID","Quantity","UnitPrice","Discount","UnitOfMeasure","CURRENCY"
   cb null
 
 Database.orderComplete.exportCsv = (path, cb) ->
