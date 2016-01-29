@@ -349,7 +349,7 @@ createOneOrderDetail = (orderId, productId, cb) ->
   # TODO (medium priority): set more realistic quantities in the config file
   quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
   # pick unitPrice from the Product
-  unitPrice = Database.product.get( productId )[5]
+  unitPrice = Database.product.get( productId ).UnitPrice
   # TODO (medium priority): set an discount depending on dates and increase buy probability accordingly
   discount = 0
 

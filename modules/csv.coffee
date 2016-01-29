@@ -7,12 +7,7 @@ _ = require 'underscore'
 
 #––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-fs.exists 'data/output', (exists) ->
-  unless exists
-    fs.mkdir 'data/output', (err) ->
-      console.error err if err
-
-
+fs.mkdir 'data/output', (err) ->
 
 
 #––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -22,6 +17,7 @@ csv.readFile = (opts, cb) ->
   opts.path ?= process.env.PWD
   opts.encoding ?= 'utf8'
   opts.seperator ?= ';'
+  opts.head ?= true
 
   fs.readFile opts.path, opts.encoding, (err, data) ->
     cb err if err
@@ -34,6 +30,13 @@ csv.readFile = (opts, cb) ->
           .replace /""/g, '"'
           .replace /,(\d\d) €/, '.$1'
           .trim()
+    # head to keys
+    if opts.head
+      table = table.slice(1).map (row) ->
+        tmp = {}
+        for item, index in row
+          tmp[ table[0][index] ] = item
+        return tmp
     cb null, table
 
 
