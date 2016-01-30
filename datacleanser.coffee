@@ -41,7 +41,7 @@ Csv.readFile path:"data/geodata/DE.tab", seperator:'\t', (err, result) ->
   keep einwohner: (item) -> item > 1000
 
   # write
-  selectColumns 'AmtGemeindeschlüssel':'LocationID', 'name':'City', 'state':'State', 'lat':'Latitide', 'lon':'Longitude', 'plz':'PostalCode', 'einwohner':'Population'
+  selectColumns 'AmtGemeindeschlüssel':'LocationID', 'name':'City', 'state':'State', 'lat':'Latitude', 'lon':'Longitude', 'plz':'PostalCode', 'einwohner':'Population'
   Csv.writeFile data, path:'data/geodata/de.csv', align:true, seperator:'; '
 
 
