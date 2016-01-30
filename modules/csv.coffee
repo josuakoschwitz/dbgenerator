@@ -99,7 +99,7 @@ csv.writeFile = (data, opts, cb) ->
     value = "\"#{col}\"" + opts.seperator
     value = value.padRight lengthes?[col] + opts.seperator.length if opts.align
     value
-  string = head.join('').trimRight().slice(0,-opts.seperator.length) + '\n'
+  string = head.join('').trimRight().slice(0,-opts.seperator.trimRight().length) + '\n'
 
   # write content
   for row in data

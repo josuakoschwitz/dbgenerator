@@ -1,3 +1,4 @@
+"ProductID";"CategoryID";"SubCategoryID";"BrandID";"ProductName";"UnitPrice"
 1;1;1;6;"Rock Rider";1990,00 €
 2;1;1;6;"Air Rider";1190,00 €
 3;1;1;10;"Fire Rider";799,00 €

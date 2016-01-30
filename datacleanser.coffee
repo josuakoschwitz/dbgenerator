@@ -1,116 +1,136 @@
 #!/usr/bin/env coffee
 
+### libraries ###
+fs = require "fs"
 _ = require "underscore"
 sugar = require "sugar"
-fs = require "fs"
 progress = require "progress"
 
+### modules ###
 Csv = require "./modules/csv"
 
-
-
-#––– database ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
+### database ###
 data = new Array()
-cell = (row, key) -> row[ data[0].indexOf key ]
 
 
-#––– run –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– main ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Csv.readFile path:"data/geodata/DE.tab", seperator:/\t/, (err, result) ->
+Csv.readFile path:"data/geodata/DE.tab", seperator:'\t', (err, result) ->
   data = result
-
-  # select …
+  # http://opengeodb.giswiki.org/wiki/OpenGeoDB_-_Dateninhalt
   # selectColumns "level", "typ", "#loc_id", "of", "ags", "invalid", "ascii", "name", "amt", "kz", "lat", "lon", "einwohner", "flaeche", "vorwahl", "plz"
-  selectColumns "level", "typ", "#loc_id", "of", "invalid", "name", "lat", "lon", "einwohner", "plz"
+  selectColumns "level", "typ", "invalid", "#loc_id":"id", "of":"parent", "ags":"AmtGemeindeschlüssel", "name", "state", "lat", "lon", "einwohner", "plz"
 
-  # where …
-  filter plz: /^.+$/
-  filter lat: /^.+$/
-  filter lon: /^.+$/
-  filter einwohner: /^.+$/
-  filter einwohner: (item) -> item > 200000
-  filter level: "6"
-  # filter level: /^[8-9]$/
-  # filter typ: "Verwaltungsgemeinschaft", '#loc_id': "290"
-  # validateParent()
+  # remove unrelevant rows
+  remove level: (level) -> level > 6
 
-  writeFile data, 'data/geodata/de.json'
+  # remove unconnected entries and inherit state
+  remove level: '', parent: ''
+  remove invalid: '1'
+  filterParentless()
+  filterParentless()
+  setState()
 
-  # write back
-  selectColumns "name", "lat", "lon", "einwohner", "plz"
-  writeFile data, 'data/geodata/example2.json' # set example to not overwrite example.json
+  # data quality
+  remove plz:'', lat:'', lon:'', einwohner:''
+  repairCells()
+  splitPlz()
+
+  # select
+  keep level: 6
+  keep einwohner: (item) -> item > 1000
+
+  # write
+  selectColumns 'AmtGemeindeschlüssel':'LocationID', 'name':'City', 'state':'State', 'lat':'Latitide', 'lon':'Longitude', 'plz':'PostalCode', 'einwohner':'Population'
+  Csv.writeFile data, path:'data/geodata/de.csv', align:true, seperator:'; '
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 selectColumns = (columns...) ->
-  head = data[0]
-  mapping = _.map columns, (column) -> head.indexOf column
-  data = _.map data, (row) -> _.map mapping, (column) -> row[column]
+  # renaming
+  renamings = _.filter columns, (column) -> _.isObject column
+  renamings = _.extend {}, renamings...
+  data = _.map data, (row) ->
+    for key1, key2 of renamings
+      row[key2] = row[key1]
+      delete row[key1]
+    row
 
-filter = (options) ->
+  # projection (select)
+  columns = _.flatten _.map columns, (column) -> if _.isObject column then _.values column else column
+  data = _.map data, (row) ->
+    tmp = {}
+    for column in columns
+      tmp[column] = row[column] or ''
+    tmp
+
+keep = (options) -> filter true, options
+
+remove = (options) -> filter false, options
+
+filter = (matched, options) ->
   data = _.filter data, (row, index) ->
-    return true if index is 0
-    tmp = _.map options, (predicate, key) ->
-      item = cell(row, key)
-      return item.match predicate if _.isRegExp predicate
-      return item is predicate if _.isString predicate
-      return predicate( item ) if _.isFunction predicate
-    return _.reduce tmp, (prev, curr) -> prev or curr
+    for key, predicates of options
+      item = row[key]
+      predicates = [predicates] unless _.isArray predicates
+      for pred in predicates
+        return matched if (_.isString(pred) or _.isNumber(pred)) and item.toString() is pred.toString()
+        return matched if _.isRegExp(pred) and item.match pred
+        return matched if _.isFunction(pred) and pred( item )
+    return not matched
 
-validateParent = ->
-  # indices of columns
-  iLoc = data[0].indexOf '#loc_id'
-  iLevel = data[0].indexOf 'level'
-  iOf = data[0].indexOf 'of'
+filterParentless = ->
+  index = []
+  index[row.id] = row for row in data
+  data = _.filter data, (row) -> row.level is '3' or index[row.parent]?
 
-  # available ids
-  tmp = data
-    .slice(1) # rm header
-    .map (row,id) -> [ Number(row[iLoc]), id+1, Number(row[iLevel])]
-    .sort (i,j) -> i[0] > j[0]
-  locIds =
-    id: _.map tmp, (value) -> value[0]
-    index: _.map tmp, (value) -> value[1]
-    level: _.map tmp, (value) -> value[2]
+setState = ->
+  index = []
+  index[row.id] = row for row in data
+  # init state
+  states = _.filter data, (row) -> row.level is '3'
+  _.each states, (state) -> state.state = state.name
+  # TODO -> write states into other rows
+  for row in data
+    tmp = row
+    tmp = index[tmp.parent] while tmp.level isnt '3'
+    row.state = tmp.state
 
-  # apply filtering
-  # bar = new progress 'validate parent ║:bar║', complete: '▓', incomplete: '░', total: data.length
-  data = data.filter (row, i) ->
-    # bar.tick 1
-    return true if i is 0
-    ofid = Number(row[iOf])
-    level = Number(row[iLevel])
-    found = ofid in locIds.id
-    # console.log " of: #{ofid} not found (Level #{level})" unless found
-    return found
+repairCells = ->
+  for row in data
+    for key, value of row
+      value = value.replace /,$/, ''
+      row[key] = value
+
+splitPlz = ->
+  for row in data
+    row.plz = row.plz.split ','
+    row.plz = row.plz.map (plz) -> '"' + plz + '"'
 
 
-writeFile = (arr, path) ->
-  lengthes = getLengthes arr
-  if path.match /\.json$/i
-    out = _.map arr, (row) ->
-      row = _.map row, (item, i) ->
-        ('\"' + item + '\", ').padRight(lengthes[i] + 4)
-      row = row.join('').trimRight().slice(0,-1)
-      row = "  [#{row}]"
-      row
-    out = out.join ',\n'
-    out = "[\n#{out}\n]"
-  # else if path.match /\.csv$/i
-  #   out = _.map arr, (row) ->
-  #     row = _.map row, (item, i) ->
-  #       ('\"' + item + '\"; ').padRight(lengthes[i] + 4) if _.isString item
-  #       ('\"' + item + '\"; ').padRight(lengthes[i] + 4) if _.isArray item
-  #     row.join('').trimRight().slice(0,-1)
-  #   out = out.join '\n'
-  else return
-  fs.writeFile path, out
+#––– IO ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-getLengthes = (arr) ->
-  lengthes = _.map arr, (row) ->
-    item?.length or 0 for item in row
-  lengthes = _.reduce lengthes, (memo, row) ->
-    _.max([ memo[index], row[index] ]) for item, index in row
-  lengthes
+# writeFile = (path) ->
+#   if path.match /\.json$/i
+#     lengthes = getLengthes data
+#     out = _.map data, (row) ->
+#       row = _.map row, (item, i) ->
+#         ('\"' + item + '\", ').padRight(lengthes[i] + 4)
+#       row = row.join('').trimRight().slice(0,-1)
+#       row = "  [#{row}]"
+#       row
+#     out = out.join ',\n'
+#     out = "[\n#{out}\n]"
+#     fs.writeFile path, out
+#   if path.match /\.csv$/i
+#     Csv.writeFile data, path:path, align:true, seperator:'; '
+
+# getLengthes = ->
+#   lengthes = _.map data, (row) ->
+#     _.mapObject row, (item) -> item?.length or 0
+#   lengthesHead = _.mapObject data[0], (v, key) -> key.length
+#   lengthes = _.reduce lengthes, (memo, row) ->
+#     _.mapObject memo, (val, key) -> _.max [ val, row[key] ]
+#   , lengthesHead
+#   lengthes
