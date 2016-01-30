@@ -30,7 +30,7 @@ names =
 
 ### locations ###
 # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
-locations = require "../data/geodata/example.json"
+locations = require "../data/input/example.json"
 population = undefined
 
 

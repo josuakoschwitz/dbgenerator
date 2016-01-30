@@ -15,7 +15,7 @@ data = new Array()
 
 #––– main ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-Csv.readFile path:"data/geodata/DE.tab", seperator:'\t', (err, result) ->
+Csv.readFile path:"data/input/DE.tab", seperator:'\t', (err, result) ->
   data = result
   # http://opengeodb.giswiki.org/wiki/OpenGeoDB_-_Dateninhalt
   # selectColumns "level", "typ", "#loc_id", "of", "ags", "invalid", "ascii", "name", "amt", "kz", "lat", "lon", "einwohner", "flaeche", "vorwahl", "plz"
@@ -42,7 +42,7 @@ Csv.readFile path:"data/geodata/DE.tab", seperator:'\t', (err, result) ->
 
   # write
   selectColumns 'AmtGemeindeschlüssel':'LocationID', 'name':'City', 'state':'State', 'lat':'Latitude', 'lon':'Longitude', 'plz':'PostalCode', 'einwohner':'Population'
-  Csv.writeFile data, path:'data/geodata/de.csv', align:true, seperator:'; '
+  Csv.writeFile data, path:'data/input/de.csv', align:true, seperator:'; '
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
