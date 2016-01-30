@@ -13,24 +13,34 @@ fs.mkdir 'data/output', (err) ->
 
 #––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+formatCell = (item) ->
+  item = item.trim()
+  if item.match /^\[.*\]$/            # Array
+    return item
+      .replace( /^\[(.*)\]$/, '$1' )
+      .split(',').map formatCell
+  else
+    return item
+      .replace /^"(.*)"$/, '$1'       # around strings
+      .replace /""/g, '"'             # escaped quotes
+      .replace /(\d)\s?€/, '$1'       # currency
+      .replace /(\d+),(\d+)/, '$1.$2' # comma natation to dot notation for decimals
+
 # cb = (err, data-array) ->
 csv.readFile = (opts, cb) ->
+  # set defaults
   opts.path ?= process.env.PWD
   opts.encoding ?= 'utf8'
   opts.seperator ?= ';'
   opts.head ?= true
 
+  # read file
   fs.readFile opts.path, opts.encoding, (err, data) ->
     cb err if err
     table = data.split /[\r\n]+/
     table = for row in table when row.length > 0
-      row = row.split new RegExp "#{opts.seperator}(?=(?:[^\"]*\"[^\"]*\")*?[^\"]*$)"
-      row = for item, i in row
-        item = item
-          .replace /^"(.+)"$/, '$1'
-          .replace /""/g, '"'
-          .replace /,(\d\d) €/, '.$1'
-          .trim()
+      row = row.split new RegExp opts.seperator + "(?=(?:[^\"]*\"[^\"]*\")*?[^\"]*$)" + "(?=(?:[^\\[\\]]*\\[[^\\[\\]]*\\])*?[^\\[\\]]*$)"
+      row = row.map formatCell
     # head to keys
     if opts.head
       table = table.slice(1).map (row) ->
