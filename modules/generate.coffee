@@ -45,13 +45,38 @@ normalize = (obj) ->
   sum = _.max _.values obj
   obj = _.mapObject obj, (val, key) -> val / sum
 
+
+randomize = (obj) ->
+  # normalize, cumulate
+  sum = 0
+  obj = _.mapObject obj, (val, key) -> sum += val
+  obj = _.mapObject obj, (val, key) -> val / sum
+  # to array, minus first
+  array = _.map obj, (value, key) -> key: key, prob: value
+  # heuristic for pivot
+  # middle = ( _.findIndex array, (item) -> item.prob > 0.5 ) / array.length
+  # random_bin = ->
+  #   rand = Math.random()
+  #   start = 0
+  #   end = array.length # is always excluding
+  #   # binary search
+  #   while end - start > 10
+  #     pivot = Math.floor start + middle * (end-start)
+  #     if rand < array[pivot].prob then end = pivot
+  #     else start = pivot
+  #   i = _.findIndex array, (item) -> item.prob > rand
+  #   array[i].key
+  random_arr = ->
+    rand = Math.random()
+    i = _.findIndex array, (item) -> item.prob > rand
+    array[i].key
+  # random_obj = ->
+  #   rand = Math.random()
+  #   _.findKey obj, (value) -> value > rand
+  return random_arr
+
 chose = (data) ->
   rand = Math.random()
-  _.findKey data, (value) -> value > rand
-
-choseFast = (data) ->
-  rand = Math.random()
-  # TODO (high priority): make this search a binary index search for the object is already sorted
   _.findKey data, (value) -> value > rand
 
 normalizeProbability = (obj) ->
@@ -77,7 +102,7 @@ Generate.prepare = (cb) ->
     stateFactor = config.customers.state[row.State]  # distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf
     nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
     locations[ row.LocationID ] = population * stateFactor * nearRetail
-  locations = normalize cumulate locations
+  locations = randomize locations
 
   # orders / shopping basket
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
@@ -144,7 +169,7 @@ createOneCustomer = (id, cb) ->
   birthday = randomBirthday()
 
   # location
-  locationID = chose locations
+  locationID = do locations
   location = Database.location.get locationID
   postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
   city = location.City
@@ -360,10 +385,12 @@ extendShoppingBasket = (productIds) ->
   productIds.concat ranking
 
 createOneOrderDetail = (orderId, productId, cb) ->
+  # FEATURE: product ➔ quantity
   # TODO (medium priority): set more realistic quantities in the config file
   quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
   # pick unitPrice from the Product
   unitPrice = Database.product.get( productId ).UnitPrice
+  # FEATURE: discountplan/product ➔ discount/product
   # TODO (medium priority): increase buy probability as discount becomes higher
   discount = config.products.discount[ productId-1 ].discount
 
