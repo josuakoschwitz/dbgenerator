@@ -30,20 +30,36 @@ names =
 
 ### locations ###
 # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
-locations = require "../data/input/example.json"
-population = undefined
+locations = {}
 
 
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+cumulate = (obj) ->
+  sum = 0
+  _.mapObject obj, (val, key) -> sum += val
+
+normalize = (obj) ->
+  sum = _.max _.values obj
+  obj = _.mapObject obj, (val, key) -> val / sum
+
+chose = (data) ->
+  rand = Math.random()
+  _.findKey data, (value) -> value > rand
+
+choseFast = (data) ->
+  rand = Math.random()
+  # TODO (high priority): make this search a binary index search for the object is already sorted
+  _.findKey data, (value) -> value > rand
+
 normalizeProbability = (obj) ->
   sum = 0
   obj = _.mapObject obj, (val, key) -> sum += val
   obj = _.mapObject obj, (val, key) -> val / sum
 
-Generate.prepare = ->
+Generate.prepare = (cb) ->
 
   # customers / groups
   config.customers.age15to80 = normalizeProbability config.customers.age15to80
@@ -55,21 +71,13 @@ Generate.prepare = ->
   names.male = normalizeProbability names.male
 
   # customers / locations
-  iCity = locations[0].indexOf 'name'
-  iState = locations[0].indexOf 'bundesland'
-  iLat = locations[0].indexOf 'lat'
-  iLon = locations[0].indexOf 'lon'
-  iEw = locations[0].indexOf 'einwohner'
-  iPlz = locations[0].indexOf 'plz'
-  locations = locations.splice(1).map (row) ->
-    city: row[iCity]
-    state: row[iState]
-    lat: Number row[iLat]
-    lon: Number row[iLon]
-    population: Number row[iEw]
-    plz: -> plz = row[iPlz].split ','; id = Math.floor Math.random() * plz.length; plz[id]
-  population = locations.map (row) -> row.population
-  population = normalizeProbability population
+  locations = {}
+  _.each Database.location.all(), (row) ->
+    population = Number(row.Population)
+    stateFactor = config.customers.state[row.State]  # distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf
+    nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
+    locations[ row.LocationID ] = population * stateFactor * nearRetail
+  locations = normalize cumulate locations
 
   # orders / shopping basket
   config.orders.buy_amount = normalizeProbability config.orders.buy_amount
@@ -78,18 +86,40 @@ Generate.prepare = ->
   # products / discount
   config.products.discount = _(64).times -> {discount: 0, days: 0}
 
-choseByProbability = (data) ->
-  rand = Math.random()
-  _.findKey data, (value) -> value > rand
+  # no errors
+  cb null
 
 
 
 
 #––– customers –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-randomBirthday = () ->
+retailByDistance = (lat, lon) ->
+  distance = retailDistance lat, lon
+  return 0.8 if distance < 10
+  return 0.1 if distance > 80
+  return 0.9 - 0.01 * distance # if between 10 km and 80 km
+
+customersByDistance = (lat, lon) ->
+  distance = retailDistance lat, lon
+  return 1.5 if distance < 10
+  return 1.0 if distance > 60
+  return 1.6 - 0.01 * distance
+
+retailDistance = (lat1, lon1) ->
+  distances = _.mapObject config.customers.retail_stores, (coordinate, city) ->
+    lat1 = Number(lat1)
+    lon1 = Number(lon1)
+    lat2 = Number(coordinate[0])
+    lon2 = Number(coordinate[1])
+    dx = 111.3 * Math.cos( (lat1+lat2) / 2 / 180 * Math.PI ) * Math.abs( lon1 - lon2 )
+    dy = 111.3 * Math.abs( lat1 - lat2 )
+    Math.sqrt( dx * dx + dy * dy )
+  _.values(distances).reduce (prev, curr) -> _.min [prev, curr]
+
+randomBirthday = ->
   # age range
-  index = choseByProbability config.customers.age15to80
+  index = chose config.customers.age15to80
   fromAge = index * 5 + 20
   # random date
   randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
@@ -102,42 +132,27 @@ setAgeGroup = (birthday) ->
   return "14-30"
 
 randomInterestGroup = ->
-  choseByProbability config.customers.group
-
-retailByDistance = (lat1, lon1) ->
-  distances = _.mapObject config.customers.retail_stores, (coordinate, city) ->
-    lat2 = coordinate[0]
-    lon2 = coordinate[1]
-    dx = 111.3 * Math.cos( (lat1+lat2) / 2 / 180 * Math.PI ) * Math.abs( lon1 - lon2 )
-    dy = 111.3 * Math.abs( lat1 - lat2 )
-    Math.sqrt( dx * dx + dy * dy )
-  distance = _.values(distances).reduce (prev, curr) ->
-    if prev < curr then prev else curr
-  # just linear and clamped
-  return 0.8 if distance < 10
-  return 0.1 if distance > 80
-  return 0.9 - 0.01 * distance # if between 10 km and 80 km
+  chose config.customers.group
 
 createOneCustomer = (id, cb) ->
+  time1 = Date.now()
   # name
   title = if Math.random() < 0.5 then "Frau" else "Herr"
-  name = choseByProbability names.family
-  firstName = choseByProbability names.female if title is "Frau"
-  firstName = choseByProbability names.male if title is "Herr"
+  name = chose names.family
+  firstName = chose names.female if title is "Frau"
+  firstName = chose names.male if title is "Herr"
   birthday = randomBirthday()
 
   # location
-  # TODO customer location distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf)
-  locationId = choseByProbability population
-  location = locations[locationId]
-  # write
-  postalCode = location.plz()
-  city = location.city
-  state = location.state
+  locationID = chose locations
+  location = Database.location.get locationID
+  postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
+  city = location.City
+  state = location.State
   plzGroup = postalCode[0]
   country = 'Deutschland'
-  latitude = location.lat
-  longitude = location.lon
+  latitude = location.Latitude
+  longitude = location.Longitude
 
   # grouping customers
   _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
@@ -161,7 +176,6 @@ createOneCustomer = (id, cb) ->
     PlzGroup: plzGroup
     Country: country
     Coordinate: "#{longitude};#{latitude};0"
-
     _agegroup: _agegroup
     _group: _group
     _retail: _retail
@@ -225,7 +239,7 @@ createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
 
   # check each day if to start a campaign
   if Math.random() < config.orders.campaign_prob[ month ] / 30
-    campaign = choseByProbability config.orders.campaign_value
+    campaign = chose config.orders.campaign_value
     volume = Math.floor count * config.orders.campaign_duration * config.orders.campaign_volume[ month ]
     # config.orders.campaigns =
     # console.log date.format("{yyyy}-{MM}-{dd}"), "| campaign: #{campaign} | volume: #{volume}"
@@ -319,8 +333,7 @@ Generate.orders = (cb) ->
 #––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 createShoppingBasket = (customer) ->
-  amount = choseByProbability config.orders.buy_amount
-  ranking = _.clone config.products.preferences_group[ customer._group ]
+  amount = chose config.orders.buy_amount
   ranking = _.map config.products.preferences, (value, index) ->
     value *= config.products.preferences_group[ customer._group ][index] *
             config.products.preferences_sex[ customer.Title ][index] *
@@ -332,7 +345,7 @@ createShoppingBasket = (customer) ->
   _.map ranking, (value) -> value[0]
 
 extendShoppingBasket = (productIds) ->
-  amount = choseByProbability config.orders.add_amount
+  amount = chose config.orders.add_amount
   return productIds if amount is 0
   ranking = []
   for productId in productIds
@@ -351,8 +364,8 @@ createOneOrderDetail = (orderId, productId, cb) ->
   quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
   # pick unitPrice from the Product
   unitPrice = Database.product.get( productId ).UnitPrice
-  # TODO (medium priority): set an discount depending on dates and increase buy probability accordingly
-  discount = 0
+  # TODO (medium priority): increase buy probability as discount becomes higher
+  discount = config.products.discount[ productId-1 ].discount
 
   # return
   cb null,
@@ -361,7 +374,7 @@ createOneOrderDetail = (orderId, productId, cb) ->
     ProductID: productId
     Quantity: quantity
     UnitPrice: unitPrice
-    Discount: config.products.discount[ productId-1 ].discount
+    Discount: discount
     UnitOfMeasure: "ST"
     CURRENCY: "EUR"
 

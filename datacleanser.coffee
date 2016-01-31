@@ -17,7 +17,8 @@ data = new Array()
 
 Csv.readFile path:"data/input/DE.tab", seperator:'\t', (err, result) ->
   data = result
-  # http://opengeodb.giswiki.org/wiki/OpenGeoDB_-_Dateninhalt
+  # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
+  # description: http://opengeodb.giswiki.org/wiki/OpenGeoDB_-_Dateninhalt
   # selectColumns "level", "typ", "#loc_id", "of", "ags", "invalid", "ascii", "name", "amt", "kz", "lat", "lon", "einwohner", "flaeche", "vorwahl", "plz"
   selectColumns "level", "typ", "invalid", "#loc_id":"id", "of":"parent", "ags":"AmtGemeindeschlüssel", "name", "state", "lat", "lon", "einwohner", "plz"
 

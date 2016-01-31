@@ -6,25 +6,11 @@ _ = require "underscore"
 ### modules ###
 Csv = require "./csv"
 
-### private variables ###
-tableProduct = new Array()
-tableCustomer = new Array()
-tableOrder = new Array()
-tableOrderDetail = new Array()
-tableOrderComplete = new Array()
-
-
-#––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-
-
 
 #––– Product –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 Database.product = {}
-
-Database.product.count = (cb) ->
-  cb null, tableProduct.length
+tableProduct = new Array()
 
 Database.product.importCsv = (path, cb) ->
   Csv.readFile path:path, (err, data) ->
@@ -35,12 +21,43 @@ Database.product.importCsv = (path, cb) ->
 Database.product.get = (productId) ->
   _.clone tableProduct[productId-1]
 
+Database.product.count = (cb) ->
+  cb null, tableProduct.length
+
 Database.product.exportCsv = (path, cb) ->
   Csv.writeFile tableProduct, path:path, (err) -> cb err
 
 
+#––– Location ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+tableLocation = new Array()
+indexLocation = LocationID: new Array() # Index-like Structure
+Database.location = {}
+
+updateIndex = (data) ->
+  for row in data
+    indexLocation.LocationID[ Number(row.LocationID) ] = row
+
+Database.location.importCsv = (path, cb) ->
+  Csv.readFile path:path, (err, data) ->
+    return cb err if err
+    tableLocation = data
+    updateIndex tableLocation
+    return cb null
+
+Database.location.get = (LocationID) ->
+  _.clone indexLocation.LocationID[ Number(LocationID) ]
+
+Database.location.all = ->
+  _.clone tableLocation
+
+Database.location.exportCsv = (path, cb) ->
+  Csv.writeFile tableLocation, path:path, (err) -> cb err
+
+
 #––– Customer ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+tableCustomer = new Array()
 Database.customer = {}
 
 Database.customer.create = (data, cb) ->
@@ -56,6 +73,7 @@ Database.customer.exportCsv = (path, cb) ->
 
 #––– Order –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+tableOrder = new Array()
 Database.order = {}
 
 Database.order.create = (data, cb) ->
@@ -68,6 +86,7 @@ Database.order.exportCsv = (path, cb) ->
 
 #––– Order Detail ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+tableOrderDetail = new Array()
 Database.orderDetail = {}
 
 Database.orderDetail.create = (data, cb) ->
@@ -86,6 +105,7 @@ Database.orderDetail.exportCsv = (path, cb) ->
 
 #––– Order Complete ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+tableOrderComplete = new Array()
 Database.orderComplete = {}
 
 Database.orderComplete.createFromJoin = (cb) ->
