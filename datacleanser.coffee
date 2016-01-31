@@ -32,14 +32,16 @@ Csv.readFile path:"data/input/DE.tab", seperator:'\t', (err, result) ->
   filterParentless()
   setState()
 
-  # data quality
+  # selection
   remove plz:'', lat:'', lon:'', einwohner:''
+
+  # projection (select)
+  keep level: 6
+  keep einwohner: (item) -> item >= 1000
+
+  # correction
   repairCells()
   splitPlz()
-
-  # select
-  keep level: 6
-  keep einwohner: (item) -> item > 1000
 
   # write
   selectColumns 'AmtGemeindeschlüssel':'LocationID', 'name':'City', 'state':'State', 'lat':'Latitude', 'lon':'Longitude', 'plz':'PostalCode', 'einwohner':'Population'

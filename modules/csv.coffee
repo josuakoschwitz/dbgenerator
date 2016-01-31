@@ -15,16 +15,18 @@ fs.mkdir 'data/output', (err) ->
 
 formatCell = (item) ->
   item = item.trim()
-  if item.match /^\[.*\]$/            # Array
+  if item.match /^\[.*\]$/        # Array
     return item
       .replace( /^\[(.*)\]$/, '$1' )
       .split(',').map formatCell
-  else
+  else if item.match /^".*"$/     # String
     return item
-      .replace /^"(.*)"$/, '$1'       # around strings
-      .replace /""/g, '"'             # escaped quotes
-      .replace /(\d)\s?€/, '$1'       # currency
-      .replace /(\d+),(\d+)/, '$1.$2' # comma natation to dot notation for decimals
+      .replace /^"(.*)"$/, '$1'     # around strings
+      .replace /""/g, '"'           # escaped quotes
+  else                            # Number
+    return item
+      .replace /(\d)\s?€/, '$1'     # currency
+      # .replace /(\d+),(\d+)/, '$1.$2' # fails for collections
 
 # cb = (err, data-array) ->
 csv.readFile = (opts, cb) ->
@@ -125,6 +127,6 @@ csv.writeFile = (data, opts, cb) ->
       value = value + opts.seperator
       value = value.padRight lengthes?[col] + opts.seperator.length if opts.align
       value
-    string += tmp.join('').trimRight().slice(0,-opts.seperator.length) + '\n'
+    string += tmp.join('').trimRight().slice(0,-opts.seperator.trimRight().length) + '\n'
   fs.writeFile opts.path, string, opts.encoding, cb
 
