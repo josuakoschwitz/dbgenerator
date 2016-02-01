@@ -117,6 +117,7 @@ Database.customerJoined = {}
 Database.customerJoined.create = (cb) ->
   tableCustomerJoined = tableCustomerJoined.concat _.map tableCustomer, (customerRow) ->
     customerRow.PlzZone = customerRow.PostalCode[0]
+    customerRow.Country = "Deutschland"
     locationRow = Database.location.get customerRow.LocationID
     locationRow.Coordinate = "#{locationRow.Longitude};#{locationRow.Latitude};0"
     _.pick _.extend( customerRow, locationRow ), "CustomerID", "Title", "Name", "FirstName", "Birthday", "PostalCode", "City", "State", "PlzZone", "Country", "Coordinate"

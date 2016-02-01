@@ -33,6 +33,7 @@ async.series [
   (cb) -> Database.orderJoined.create cb
 
   # write after ETL
+  (cb) -> Database.product.exportCsv "data/output_etl/products.csv", cb
   (cb) -> Database.customerJoined.exportCsv "data/output_etl/customers.csv", cb
   (cb) -> Database.orderJoined.exportCsv "data/output_etl/oderdetails.csv", cb
 

@@ -357,7 +357,7 @@ extendShoppingBasket = (productIds) ->
   ranking = []
   for productId in productIds
     for value, index in config.products.correlation[productId]
-      ranking[index+1] = value + (ranking[index+1] or 0)
+      ranking[index+1] = (value + 0.1) * (ranking[index+1] or 1)
   ranking = _.map ranking, (value, index) -> [index, value]
   ranking = _.filter ranking, (VALUE) -> (value[1] not in productIds) and value[1]>0
   ranking = _.shuffle ranking
