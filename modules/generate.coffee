@@ -39,10 +39,10 @@ random = {}
 randomize = (obj) ->
   # normalize, cumulate
   sum = 0
-  obj = _.mapObject obj, (val, key) -> sum += val
-  obj = _.mapObject obj, (val, key) -> val / sum
+  cummulated = _.mapObject obj, (val, key) -> sum += val
+  normalized = _.mapObject cummulated, (val, key) -> val / sum
   # to array, minus first
-  array = _.map obj, (value, key) -> key: key, prob: value
+  array = _.map normalized, (value, key) -> key: key, prob: value
   # heuristic for pivot
   # middle = ( _.findIndex array, (item) -> item.prob > 0.5 ) / array.length
   # random_bin = ->
@@ -80,14 +80,22 @@ Generate.prepare = (cb) ->
   random.femaleName = randomize names.female
   random.maleName = randomize names.male
 
-  # customers / locations
+  # customers / locations, retail
   locations = {}
+  locationsRetail = {}
   _.each Database.location.all(), (row) ->
     population = Number(row.Population)
     stateFactor = config.customers.state[row.State]  # distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf
     nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
     locations[ row.LocationID ] = population * stateFactor * nearRetail
+    locationsRetail[ row.LocationID ] = population * stateFactor * nearRetail * retailByDistance row.Latitude, row.Longitude
   random.location = randomize locations
+
+  # retail correction
+  all = _.reduce (_.map locations, (value) -> value), (memo, curr) -> memo + curr
+  retail = _.reduce locationsRetail, (memo, curr) -> memo + curr
+  calcRetail = retail / all
+  config.orders.retailFactor = _.map config.orders.buy_retail, (actualRetail) -> actualRetail / calcRetail
 
   # orders / shopping basket
   random.buyAmount = randomize config.orders.buy_amount
@@ -208,8 +216,11 @@ createOneOrder = (orderId, orderDate, cb) ->
     customerId = Math.floor Math.random() * customersCount + 1
   customer = Database.customer.get customerId
 
+  # correct retail probability
+  year =  orderDate.getFullYear() + config.orders.buy_retail.length - Date.create().getFullYear()
+  retailFactor = config.orders.retailFactor[year]
   # set the distributionChannel (retail / eShop) depending on customer._retail
-  if Math.random() < customer._retail and orderDate.isWeekday()
+  if Math.random() < customer._retail * retailFactor * 7/5 and orderDate.isWeekday()
     distributionChannelId = 1 # retail
   else
     distributionChannelId = 2 # eShop
