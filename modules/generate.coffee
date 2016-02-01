@@ -28,11 +28,7 @@ names =
   female: require "../data/names/female.json"
   male:   require "../data/names/male.json"
 
-### locations ###
-# source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
-locations = {}
-
-### random ###
+### global variables ###
 random = {}
 
 
@@ -158,12 +154,6 @@ createOneCustomer = (id, cb) ->
   locationID = do random.location
   location = Database.location.get locationID
   postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
-  city = location.City
-  state = location.State
-  plzGroup = postalCode[0]
-  country = 'Deutschland'
-  latitude = location.Latitude
-  longitude = location.Longitude
 
   # grouping customers
   _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
@@ -171,8 +161,7 @@ createOneCustomer = (id, cb) ->
 
   # probability that this customer buys in a retail store rather than in an eShop
   # dependig on distance to retail stores
-  _retail = retailByDistance latitude, longitude
-  # _retail = config.customers.buy_channel.retail
+  _retail = retailByDistance location.Latitude, location.Longitude
 
   # return
   cb null,
@@ -182,11 +171,7 @@ createOneCustomer = (id, cb) ->
     FirstName: firstName
     Birthday: birthday
     PostalCode: postalCode
-    City: city
-    State: state
-    PlzGroup: plzGroup
-    Country: country
-    Coordinate: "#{longitude};#{latitude};0"
+    LocationID: locationID
     _agegroup: _agegroup
     _group: _group
     _retail: _retail
@@ -388,8 +373,6 @@ createOneOrderDetail = (orderId, productId, cb) ->
     Quantity: quantity
     UnitPrice: unitPrice
     Discount: discount
-    UnitOfMeasure: "ST"
-    CURRENCY: "EUR"
 
 createSomeOrderDetails = (orderId, customer, cb) ->
   # select products

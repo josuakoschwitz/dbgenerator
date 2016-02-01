@@ -51,6 +51,12 @@ Database.location.get = (LocationID) ->
 Database.location.all = ->
   _.clone tableLocation
 
+Database.location.selection = (cb) ->
+  for key of tableLocation
+    delete tableLocation[key].PostalCode
+    delete tableLocation[key].Population
+  cb null
+
 Database.location.exportCsv = (path, cb) ->
   Csv.writeFile tableLocation, path:path, (err) -> cb err
 
@@ -103,16 +109,35 @@ Database.orderDetail.exportCsv = (path, cb) ->
   Csv.writeFile tableOrderDetail, path:path, (err) -> cb err
 
 
-#––– Order Complete ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+#––– Customer Joined –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-tableOrderComplete = new Array()
-Database.orderComplete = {}
+tableCustomerJoined = new Array()
+Database.customerJoined = {}
 
-Database.orderComplete.createFromJoin = (cb) ->
-  tableOrderComplete = tableOrderComplete.concat _.map tableOrderDetail, (orderDetailRow) ->
+Database.customerJoined.create = (cb) ->
+  tableCustomerJoined = tableCustomerJoined.concat _.map tableCustomer, (customerRow) ->
+    customerRow.PlzZone = customerRow.PostalCode[0]
+    locationRow = Database.location.get customerRow.LocationID
+    locationRow.Coordinate = "#{locationRow.Longitude};#{locationRow.Latitude};0"
+    _.pick _.extend( customerRow, locationRow ), "CustomerID", "Title", "Name", "FirstName", "Birthday", "PostalCode", "City", "State", "PlzZone", "Country", "Coordinate"
+  cb null
+
+Database.customerJoined.exportCsv = (path, cb) ->
+  Csv.writeFile tableCustomerJoined, path:path, (err) -> cb err
+
+
+#––– Order Joined ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+tableOrderJoined = new Array()
+Database.orderJoined = {}
+
+Database.orderJoined.create = (cb) ->
+  tableOrderJoined = tableOrderJoined.concat _.map tableOrderDetail, (orderDetailRow) ->
+    orderDetailRow.UnitOfMeasure = "ST"
+    orderDetailRow.CURRENCY = "EUR"
     orderRow = _.clone tableOrder[ orderDetailRow.OrderID - 1 ]
     _.pick _.extend( orderRow, orderDetailRow ), "OrderDetailID", "OrderID", "CustomerID","DistributionChannelID","OrderDate","ProductID","Quantity","UnitPrice","Discount","UnitOfMeasure","CURRENCY"
   cb null
 
-Database.orderComplete.exportCsv = (path, cb) ->
-  Csv.writeFile tableOrderComplete, path:path, splitDate:true, (err) -> cb err
+Database.orderJoined.exportCsv = (path, cb) ->
+  Csv.writeFile tableOrderJoined, path:path, (err) -> cb err
