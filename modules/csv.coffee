@@ -26,7 +26,7 @@ formatCell = (item) ->
   else                            # Number
     return item
       .replace /(\d)\s?€/, '$1'     # currency
-      # .replace /(\d+),(\d+)/, '$1.$2' # fails for collections
+      .replace /(\d+),(\d{1,4})/, '$1.$2'
 
 # cb = (err, data-array) ->
 csv.readFile = (opts, cb) ->

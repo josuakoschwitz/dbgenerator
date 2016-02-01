@@ -32,19 +32,13 @@ names =
 # source: http://www.fa-technik.adfc.de/code/opengeodb/DE.tab
 locations = {}
 
+### random ###
+random = {}
+
 
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-cumulate = (obj) ->
-  sum = 0
-  _.mapObject obj, (val, key) -> sum += val
-
-normalize = (obj) ->
-  sum = _.max _.values obj
-  obj = _.mapObject obj, (val, key) -> val / sum
-
 
 randomize = (obj) ->
   # normalize, cumulate
@@ -79,21 +73,16 @@ chose = (data) ->
   rand = Math.random()
   _.findKey data, (value) -> value > rand
 
-normalizeProbability = (obj) ->
-  sum = 0
-  obj = _.mapObject obj, (val, key) -> sum += val
-  obj = _.mapObject obj, (val, key) -> val / sum
-
 Generate.prepare = (cb) ->
 
   # customers / groups
-  config.customers.age15to80 = normalizeProbability config.customers.age15to80
-  config.customers.group = normalizeProbability config.customers.group
+  random.age = randomize config.customers.age15to80
+  random.group = randomize config.customers.group
 
   # customers / names
-  names.family = normalizeProbability names.family
-  names.female = normalizeProbability names.female
-  names.male = normalizeProbability names.male
+  random.familyName = randomize names.family
+  random.femaleName = randomize names.female
+  random.maleName = randomize names.male
 
   # customers / locations
   locations = {}
@@ -102,11 +91,11 @@ Generate.prepare = (cb) ->
     stateFactor = config.customers.state[row.State]  # distribution by: https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf
     nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
     locations[ row.LocationID ] = population * stateFactor * nearRetail
-  locations = randomize locations
+  random.location = randomize locations
 
   # orders / shopping basket
-  config.orders.buy_amount = normalizeProbability config.orders.buy_amount
-  config.orders.add_amount = normalizeProbability config.orders.add_amount
+  random.buyAmount = randomize config.orders.buy_amount
+  random.addAmount = randomize config.orders.add_amount
 
   # products / discount
   config.products.discount = _(64).times -> {discount: 0, days: 0}
@@ -144,7 +133,7 @@ retailDistance = (lat1, lon1) ->
 
 randomBirthday = ->
   # age range
-  index = chose config.customers.age15to80
+  index = random.age()
   fromAge = index * 5 + 20
   # random date
   randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
@@ -156,20 +145,17 @@ setAgeGroup = (birthday) ->
   return "31-50" if age > 30
   return "14-30"
 
-randomInterestGroup = ->
-  chose config.customers.group
-
 createOneCustomer = (id, cb) ->
   time1 = Date.now()
   # name
   title = if Math.random() < 0.5 then "Frau" else "Herr"
-  name = chose names.family
-  firstName = chose names.female if title is "Frau"
-  firstName = chose names.male if title is "Herr"
-  birthday = randomBirthday()
+  name = do random.familyName
+  firstName = do random.femaleName if title is "Frau"
+  firstName = do random.maleName if title is "Herr"
+  birthday = do randomBirthday
 
   # location
-  locationID = do locations
+  locationID = do random.location
   location = Database.location.get locationID
   postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
   city = location.City
@@ -181,7 +167,7 @@ createOneCustomer = (id, cb) ->
 
   # grouping customers
   _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
-  _group = randomInterestGroup()        # "family", "athletic", "outdoor"
+  _group = random.group()             # "family", "athletic", "outdoor"
 
   # probability that this customer buys in a retail store rather than in an eShop
   # dependig on distance to retail stores
@@ -358,7 +344,7 @@ Generate.orders = (cb) ->
 #––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 createShoppingBasket = (customer) ->
-  amount = chose config.orders.buy_amount
+  amount = do random.buyAmount
   ranking = _.map config.products.preferences, (value, index) ->
     value *= config.products.preferences_group[ customer._group ][index] *
             config.products.preferences_sex[ customer.Title ][index] *
@@ -370,7 +356,7 @@ createShoppingBasket = (customer) ->
   _.map ranking, (value) -> value[0]
 
 extendShoppingBasket = (productIds) ->
-  amount = chose config.orders.add_amount
+  amount = do random.addAmount
   return productIds if amount is 0
   ranking = []
   for productId in productIds
