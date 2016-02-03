@@ -217,7 +217,7 @@ createOneOrder = (orderId, orderDate, cb) ->
   customer = Database.customer.get customerId
 
   # correct retail probability
-  year =  orderDate.getFullYear() + config.orders.buy_retail.length - Date.create().getFullYear()
+  year =  orderDate.getFullYear() + config.orders.years - Date.create().getFullYear()
   retailFactor = config.orders.retailFactor[year]
   # set the distributionChannel (retail / eShop) depending on customer._retail
   if Math.random() < customer._retail * retailFactor * 7/5 and orderDate.isWeekday()
@@ -272,7 +272,7 @@ createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
 
 createSomeOrders = (totalCount, cb) ->
   # date init
-  totalYears = config.orders.growth.length
+  totalYears = config.orders.years
   startDate = Date.create().beginningOfYear().addYears( -totalYears )
 
   # helper function
