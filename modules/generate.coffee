@@ -10,9 +10,12 @@ ProgressBar = require "progress"
 Database = require "./database"
 
 
-#––– data –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+#––– data ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 ### configs ###
+# uses https://www.bmvit.gv.at/service/publikationen/verkehr/fuss_radverkehr/downloads/riz201503.pdf
+# uses https://de.wikipedia.org/wiki/Altersstruktur
 config =
   customers: require "../config/customers.json"
   orders: require "../config/orders.json"
@@ -33,37 +36,42 @@ random = {}
 
 
 
-
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+# in:   object or array that has frequencies in its values
+# out:  function selecting a random key of the input by frequencies when called
 randomize = (obj) ->
-  # normalize, cumulate
+  # normalize, cumulate, to array
   sum = 0
   cummulated = _.mapObject obj, (val, key) -> sum += val
   normalized = _.mapObject cummulated, (val, key) -> val / sum
-  # to array, minus first
   array = _.map normalized, (value, key) -> key: key, prob: value
-  # heuristic for pivot
-  # middle = ( _.findIndex array, (item) -> item.prob > 0.5 ) / array.length
-  # random_bin = ->
-  #   rand = Math.random()
-  #   start = 0
-  #   end = array.length # is always excluding
-  #   # binary search
-  #   while end - start > 10
-  #     pivot = Math.floor start + middle * (end-start)
-  #     if rand < array[pivot].prob then end = pivot
-  #     else start = pivot
-  #   i = _.findIndex array, (item) -> item.prob > rand
-  #   array[i].key
-  random_arr = ->
+  return ->
     rand = Math.random()
     i = _.findIndex array, (item) -> item.prob > rand
     array[i].key
-  # random_obj = ->
-  #   rand = Math.random()
-  #   _.findKey obj, (value) -> value > rand
-  return random_arr
+
+# same as randomize
+# but should be much faster for really large datasets (not yet tested)
+randomizeFast = (obj) ->
+  # normalize, cumulate, to array
+  sum = 0
+  cummulated = _.mapObject obj, (val, key) -> sum += val
+  normalized = _.mapObject cummulated, (val, key) -> val / sum
+  array = _.map normalized, (value, key) -> key: key, prob: value
+  # heuristic for pivot
+  middle = ( _.findIndex array, (item) -> item.prob > 0.5 ) / array.length
+  return ->
+    rand = Math.random()
+    start = 0
+    end = array.length
+    # binary search – should be much faster for really large frequencies
+    while end - start > 10
+      pivot = Math.floor start + middle * (end-start)
+      if rand < array[pivot].prob then end = pivot
+      else start = pivot
+    i = _.findIndex array, (item) -> item.prob > rand
+    array[i].key
 
 chose = (data) ->
   rand = Math.random()
@@ -101,12 +109,15 @@ Generate.prepare = (cb) ->
   random.buyAmount = randomize config.orders.buy_amount
   random.addAmount = randomize config.orders.add_amount
 
+  # products / campaign
+  config.orders.campaigns = new Array()
+  random.campaignValue = randomize config.orders.campaign_value
+
   # products / discount
   config.products.discount = _(64).times -> {discount: 0, days: 0}
 
   # no errors
   cb null
-
 
 
 
@@ -246,17 +257,18 @@ createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
 
   # check each day if to start a campaign
   if Math.random() < config.orders.campaign_prob[ month ] / 30
-    campaign = chose config.orders.campaign_value
+    value = do random.campaignValue
     volume = Math.floor count * config.orders.campaign_duration * config.orders.campaign_volume[ month ]
-    # config.orders.campaigns =
-    # console.log date.format("{yyyy}-{MM}-{dd}"), "| campaign: #{campaign} | volume: #{volume}"
+    duration = config.orders.campaign_duration
+    config.orders.campaigns.push value: value, volume: volume, end: date.clone().addDays(duration)
+  config.orders.campaigns = config.orders.campaigns.filter (campaign) -> date < campaign.end
 
   # change discount of all products
   config.products.discount = config.products.discount.map (actualDiscount) ->
     # set a discount
     if Math.random() < config.orders.discount_prob[ month ] / 30
-      min = config.orders.discount_min[ month ]
-      max = config.orders.discount_max[ month ]
+      min = config.orders.discount_value_min[ month ]
+      max = config.orders.discount_value_max[ month ]
       days = config.orders.discount_duration
       discount = (Math.round ( Math.random() * (max-min) + min ) * 100) / 100
     else

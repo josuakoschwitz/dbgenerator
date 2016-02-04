@@ -8,7 +8,9 @@ sugar = require 'sugar'
 
 #––– Helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-fs.mkdir 'data/output', (err) ->
+### keep sure that directories are there ###
+fs.mkdir 'data/output', (err) -> console.error if err
+fs.mkdir 'data/output_etl', (err) -> console.error if err
 
 
 #––– read ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
