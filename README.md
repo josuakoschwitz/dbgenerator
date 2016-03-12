@@ -7,12 +7,16 @@
 
         npm -g install coffee-script
 
-- init
+- init project
 
         git clone https://github.com/josuakoschwitz/dbgenerator
         cd dbgenerator
         npm install
 
-- run
+- run data cleanser (prepares geodata `DE.csv` – already done)
+
+        coffee datacleanser.coffee
+
+- run generator
 
         coffee app.coffee
