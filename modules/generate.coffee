@@ -114,6 +114,22 @@ Generate.prepare = (cb) ->
   # products / discount
   config.products.discount = _(64).times -> {discount: 0, days: 0}
 
+  # products / normalize probability
+  productCount = config.products.preferences.length
+  config.products.normalize = []
+  age = config.customers.age15to80
+  for i in [0...productCount]
+    config.products.normalize[i] = 1 / (
+      config.products.preferences_group.family[i]   * config.customers.group.family *
+      config.products.preferences_group.athletic[i] * config.customers.group.athletic *
+      config.products.preferences_group.outdoor[i]  * config.customers.group.outdoor *
+      config.products.preferences_sex.Frau[i]       * 0.5 *
+      config.products.preferences_sex.Herr[i]       * 0.5 *
+      config.products.preferences_age['14-30'][i]   * (age[0]+age[1]+age[2]) *
+      config.products.preferences_age['31-50'][i]   * (age[3]+age[4]+age[5]+age[6]) *
+      config.products.preferences_age['51-80'][i]   * (age[7]+age[8]+age[9]+age[10]+age[11]+age[12])
+    )
+
   # no errors
   cb null
 
@@ -154,7 +170,7 @@ randomBirthday = ->
 
 setAgeGroup = (birthday) ->
   age = Date.create().yearsSince birthday
-  return "51-70" if age > 50
+  return "51-80" if age > 50
   return "31-50" if age > 30
   return "14-30"
 
@@ -173,7 +189,7 @@ createOneCustomer = (id, cb) ->
   postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
 
   # grouping customers
-  _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
+  _agegroup = setAgeGroup(birthday)  # "51-80", "31-50", "14-30"
   _group = do config.customers.group.random  # "family", "athletic", "outdoor"
 
   # probability that this customer buys in a retail store rather than in an eShop
@@ -364,6 +380,7 @@ randomizeBasket = (group, title, agegroup) ->
     config.products.preferences_group[ group ][index] *
     config.products.preferences_sex[ title ][index] *
     config.products.preferences_age[ agegroup ][index]) *
+    config.products.normalize[index]
     ( 1 + Math.random() * 0.5 ) # TODO: remove this line when function becomes memoized
   -> randomize(ranking).random() + 1
 
@@ -395,7 +412,6 @@ extendShoppingBasket = (productIds) ->
 
 createOneOrderDetail = (orderId, productId, crossSeling, cb) ->
   # FEATURE: product ➔ quantity
-  # TODO (medium priority): set more realistic quantities in the config file
   quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
   # pick unitPrice from the Product
   unitPrice = Database.product.get( productId ).UnitPrice
