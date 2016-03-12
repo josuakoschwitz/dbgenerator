@@ -116,11 +116,14 @@ Database.orderDetail.valdidate = (cb) ->
     .sort (p1, p2) -> p2.amount - p1.amount
   statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)}: #{p.ProductName} (#{p.ProductDescription})"
   # standard deviation
-  mid = tableOrderDetail.length / 64
+  mean = tableOrderDetail.length / 64
   stdDev = Math.sqrt( statistics
-    .map (p) -> (mid - p.amount) * (mid - p.amount)
+    .map (p) -> (mean - p.amount) * (mean - p.amount)
     .reduce (a, b) -> a + b )
-  console.log "\n-> standard deviation = #{stdDev}"
+  console.log "\nSTATISTICS (ignoring Quantity of OrderDetails)"
+  console.log "-> sum = #{tableOrderDetail.length}"
+  console.log "-> arithmetic mean = #{mean}"
+  console.log "-> standard deviation = #{stdDev}"
   cb null
 
 Database.orderDetail.exportCsv = (path, cb) ->
