@@ -357,21 +357,23 @@ Generate.orders = (cb) ->
 
 #––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+# TODO: memoize this function (_.memoize didn't work well)
+randomizeBasket = (group, title, agegroup) ->
+  ranking = config.products.preferences.map (value, index) ->
+    Number( value *
+    config.products.preferences_group[ group ][index] *
+    config.products.preferences_sex[ title ][index] *
+    config.products.preferences_age[ agegroup ][index]) *
+    ( 1 + Math.random() * 0.5 ) # TODO: remove this line when function becomes memoized
+  -> Number(do randomize(ranking).random) + 1
+
 createShoppingBasket = (customer) ->
   amount = do config.orders.buy_amount.random
-  ranking = _.map config.products.preferences, (value, index) ->
-    value *= config.products.preferences_group[ customer._group ][index] *
-            config.products.preferences_sex[ customer.Title ][index] *
-            config.products.preferences_age[ customer._agegroup ][index] *
-            ( 1 + Math.random() * 0.5 )
-    [index+1, value]
-
-  # TODO
-  # ranking = randomize(ranking).random
-
-  ranking = _.sortBy ranking, (value) -> -value[1]
-  ranking = ranking.slice(0, amount)
-  _.map ranking, (value) -> value[0]
+  IDs = []
+  while IDs.length < amount
+    oneID = do randomizeBasket customer._group, customer.Title, customer._agegroup
+    IDs.push oneID unless oneID in IDs
+  IDs
 
 extendShoppingBasket = (productIds) ->
   amount = do config.orders.add_amount.random
