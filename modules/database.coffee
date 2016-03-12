@@ -137,7 +137,7 @@ Database.orderJoined.create = (cb) ->
     orderDetailRow.UnitOfMeasure = "ST"
     orderDetailRow.CURRENCY = "EUR"
     orderRow = _.clone tableOrder[ orderDetailRow.OrderID - 1 ]
-    _.pick _.extend( orderRow, orderDetailRow ), "OrderDetailID", "OrderID", "CustomerID","DistributionChannelID","OrderDate","ProductID","Quantity","UnitPrice","Discount","UnitOfMeasure","CURRENCY"
+    _.pick _.extend( orderRow, orderDetailRow ), "OrderDetailID", "OrderID", "CustomerID","DistributionChannelID","OrderDate","OrderDiscount","ProductID","Quantity","UnitPrice","Discount","UnitOfMeasure","CURRENCY"
   cb null
 
 Database.orderJoined.exportCsv = (path, cb) ->

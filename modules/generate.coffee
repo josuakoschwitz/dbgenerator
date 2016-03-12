@@ -242,13 +242,21 @@ createOneOrder = (orderId, orderDate, cb) ->
     CustomerID: customerId,
     DistributionChannelID: distributionChannelId,
     OrderDate: orderDate
-  Database.order.create order, (err) -> return cb err if err
 
   # create orderDetails to that order
   createSomeOrderDetails orderId, customer, (err, orderDetails) ->
     return cb err if err
-    Database.orderDetail.create orderDetails, (err) ->
-      console.log err if err
+
+    # apply campaign discount
+    # totalPrice = orderDetails.map((oderDetail) -> Number(oderDetail.UnitPrice)).reduce (prev, curr) -> prev + curr
+    order.OrderDiscount = 0
+    for campaign in config.orders.campaigns when campaign.discountProb > Math.random()
+      order.OrderDiscount = campaign.discountValue
+
+    # write order and orderDetails to database
+    Database.order.create order, (err) -> return cb err if err
+    Database.orderDetail.create orderDetails, (err) -> return cb err if err
+
   cb null
 
 
@@ -257,10 +265,10 @@ createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
 
   # check each day if to start a campaign
   if Math.random() < config.orders.campaign_prob[ month ] / 30
-    value = do random.campaignValue
-    volume = Math.floor count * config.orders.campaign_duration * config.orders.campaign_volume[ month ]
+    discountValue = do random.campaignValue
+    discountProb = config.orders.campaign_volume[ month ] * ( 1 + (Math.random() * 2 - 1) * config.orders.campaign_volume_fuzzy)
     duration = config.orders.campaign_duration
-    config.orders.campaigns.push value: value, volume: volume, end: date.clone().addDays(duration)
+    config.orders.campaigns.push discountValue: discountValue, discountProb: discountProb, end: date.clone().addDays(duration)
   config.orders.campaigns = config.orders.campaigns.filter (campaign) -> date < campaign.end
 
   # change discount of all products
