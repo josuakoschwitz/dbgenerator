@@ -46,7 +46,7 @@ randomize = (obj) ->
   obj.random = ->
     rand = Math.random()
     i = _.findIndex array, (item) -> item.prob > rand
-    array[i].key
+    if (array[i].key).match /^\d+$/ then Number(array[i].key) else array[i].key
   return obj
 
 # same as above but should be much faster for really large datasets (not yet tested)
@@ -68,7 +68,7 @@ randomizeFast = (obj) ->
       if rand < array[pivot].prob then end = pivot
       else start = pivot
     i = _.findIndex array, (item) -> item.prob > rand
-    array[i].key
+    if (array[i].key).match /^\d+$/ then Number(array[i].key) else array[i].key
   return obj
 
 chose = (data) ->
@@ -365,32 +365,35 @@ randomizeBasket = (group, title, agegroup) ->
     config.products.preferences_sex[ title ][index] *
     config.products.preferences_age[ agegroup ][index]) *
     ( 1 + Math.random() * 0.5 ) # TODO: remove this line when function becomes memoized
-  -> Number(do randomize(ranking).random) + 1
+  -> randomize(ranking).random() + 1
 
 createShoppingBasket = (customer) ->
   amount = do config.orders.buy_amount.random
-  IDs = []
-  while IDs.length < amount
-    oneID = do randomizeBasket customer._group, customer.Title, customer._agegroup
-    IDs.push oneID unless oneID in IDs
-  IDs
+  productIds = []
+  while productIds.length < amount
+    newID = do randomizeBasket customer._group, customer.Title, customer._agegroup
+    productIds.push newID unless newID in productIds
+  productIds
 
-extendShoppingBasket = (productIds) ->
-  amount = do config.orders.add_amount.random
-  return productIds if amount is 0
-  ranking = []
+randomizeExtendBaseket = (productIds) ->
+  count = config.products.preferences.length
+  ranking = (0.9 + 0.2 * Math.random() for i in [0...count])
   for productId in productIds
     for value, index in config.products.correlation[productId]
-      ranking[index+1] = (value + 0.1) * (ranking[index+1] or 1)
-  ranking = _.map ranking, (value, index) -> [index, value]
-  ranking = _.filter ranking, (VALUE) -> (value[1] not in productIds) and value[1]>0
-  ranking = _.shuffle ranking
-  ranking = _.sortBy ranking, (value) -> -value[1]
-  ranking = ranking.slice(0, amount)
-  ranking = _.map ranking, (value) -> value[0]
-  productIds.concat ranking
+      ranking[index] *= Math.pow value + 0.1, 2
+  -> randomize(ranking).random() + 1
 
-createOneOrderDetail = (orderId, productId, cb) ->
+extendShoppingBasket = (productIds) ->
+  productIdsFinal = _.clone productIds
+  amount = do config.orders.add_amount.random
+  return productIdsFinal if amount is 0
+  amount += productIdsFinal.length
+  while productIdsFinal.length < amount
+    newID = do randomizeExtendBaseket productIdsFinal
+    productIdsFinal.push newID unless newID in productIdsFinal
+  productIdsFinal
+
+createOneOrderDetail = (orderId, productId, crossSeling, cb) ->
   # FEATURE: product ➔ quantity
   # TODO (medium priority): set more realistic quantities in the config file
   quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
@@ -408,14 +411,16 @@ createOneOrderDetail = (orderId, productId, cb) ->
     Quantity: quantity
     UnitPrice: unitPrice
     Discount: discount
+    _crossSelling: crossSeling
 
 createSomeOrderDetails = (orderId, customer, cb) ->
   # select products
   productIds = createShoppingBasket customer
-  productIds = extendShoppingBasket productIds
+  productIdsFinal = extendShoppingBasket productIds
 
   # create order details
-  async.map productIds, (productId, cb) ->
-    createOneOrderDetail orderId, productId, cb
+  async.map productIdsFinal, (productId, cb) ->
+    crossSelling = not (productId in productIds)
+    createOneOrderDetail orderId, productId, crossSelling, cb
   , (err, orderDetails) ->
     cb err, orderDetails

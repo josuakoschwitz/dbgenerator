@@ -108,17 +108,21 @@ Database.orderDetail.create = (data, cb) ->
 
 Database.orderDetail.valdidate = (cb) ->
   products = _.clone tableProduct
-  products.map (product) -> product.amount = 0;
-  init = ({id: i, amount: 0} for i in [1..64])
+  products = products.map (product) -> product.amount = 0; product.amountCs = 0; product
   statistics = tableOrderDetail
-    .map (item) -> item.ProductID
-    .reduce ((memo, curr) -> memo[curr-1].amount++; memo), products
-    .sort (p1, p2) -> p2.amount - p1.amount
-  statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)}: #{p.ProductName} (#{p.ProductDescription})"
+    .reduce ((memo, oDetail) ->
+      if oDetail._crossSelling
+        memo[oDetail.ProductID-1].amountCs++
+      else
+        memo[oDetail.ProductID-1].amount++
+      return memo), products
+    .sort (p1, p2) ->
+      p2.amount + p2.amountCs - p1.amount - p1.amountCs
+  statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(4)}+#{p.amountCs.toString().padLeft(4)}=#{(p.amount+p.amountCs).toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)} #{p.ProductName} (#{p.ProductDescription})"
   # standard deviation
   mean = tableOrderDetail.length / 64
   stdDev = Math.sqrt( statistics
-    .map (p) -> (mean - p.amount) * (mean - p.amount)
+    .map (p) -> Math.pow (mean - p.amount - p.amountCs), 2
     .reduce (a, b) -> a + b )
   console.log "\nSTATISTICS (ignoring Quantity of OrderDetails)"
   console.log "-> sum = #{tableOrderDetail.length}"
