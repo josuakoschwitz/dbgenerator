@@ -2,6 +2,7 @@ Database = module.exports
 
 ### libraries ###
 _ = require "underscore"
+sugar = require "sugar"
 
 ### modules ###
 Csv = require "./csv"
@@ -103,6 +104,23 @@ Database.orderDetail.create = (data, cb) ->
   row.OrderDetailID = nextID + i for row, i in data
   # save
   tableOrderDetail.push.apply tableOrderDetail, data
+  cb null
+
+Database.orderDetail.valdidate = (cb) ->
+  products = _.clone tableProduct
+  products.map (product) -> product.amount = 0;
+  init = ({id: i, amount: 0} for i in [1..64])
+  statistics = tableOrderDetail
+    .map (item) -> item.ProductID
+    .reduce ((memo, curr) -> memo[curr-1].amount++; memo), products
+    .sort (p1, p2) -> p2.amount - p1.amount
+  statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)}: #{p.ProductName} (#{p.ProductDescription})"
+  # standard deviation
+  mid = tableOrderDetail.length / 64
+  stdDev = Math.sqrt( statistics
+    .map (p) -> (mid - p.amount) * (mid - p.amount)
+    .reduce (a, b) -> a + b )
+  console.log "\n-> standard deviation = #{stdDev}"
   cb null
 
 Database.orderDetail.exportCsv = (path, cb) ->

@@ -21,6 +21,9 @@ async.series [
   (cb) -> Generate.customers cb
   (cb) -> Generate.orders cb
 
+  # print statistics
+  (cb) -> Database.orderDetail.valdidate cb
+
   # write before ETL
   (cb) -> Database.location.selection cb
   (cb) -> Database.location.exportCsv "data/output/locations.csv", cb

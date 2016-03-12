@@ -365,6 +365,10 @@ createShoppingBasket = (customer) ->
             config.products.preferences_age[ customer._agegroup ][index] *
             ( 1 + Math.random() * 0.5 )
     [index+1, value]
+
+  # TODO
+  # ranking = randomize(ranking).random
+
   ranking = _.sortBy ranking, (value) -> -value[1]
   ranking = ranking.slice(0, amount)
   _.map ranking, (value) -> value[0]
