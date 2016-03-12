@@ -31,9 +31,6 @@ names =
   female: require "../data/names/female.json"
   male:   require "../data/names/male.json"
 
-### global variables ###
-random = {}
-
 
 
 #––– helper ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -46,13 +43,13 @@ randomize = (obj) ->
   cummulated = _.mapObject obj, (val, key) -> sum += val
   normalized = _.mapObject cummulated, (val, key) -> val / sum
   array = _.map normalized, (value, key) -> key: key, prob: value
-  return ->
+  obj.random = ->
     rand = Math.random()
     i = _.findIndex array, (item) -> item.prob > rand
     array[i].key
+  return obj
 
-# same as randomize
-# but should be much faster for really large datasets (not yet tested)
+# same as above but should be much faster for really large datasets (not yet tested)
 randomizeFast = (obj) ->
   # normalize, cumulate, to array
   sum = 0
@@ -61,7 +58,7 @@ randomizeFast = (obj) ->
   array = _.map normalized, (value, key) -> key: key, prob: value
   # heuristic for pivot
   middle = ( _.findIndex array, (item) -> item.prob > 0.5 ) / array.length
-  return ->
+  obj.random = ->
     rand = Math.random()
     start = 0
     end = array.length
@@ -72,6 +69,7 @@ randomizeFast = (obj) ->
       else start = pivot
     i = _.findIndex array, (item) -> item.prob > rand
     array[i].key
+  return obj
 
 chose = (data) ->
   rand = Math.random()
@@ -80,13 +78,13 @@ chose = (data) ->
 Generate.prepare = (cb) ->
 
   # customers / groups
-  random.age = randomize config.customers.age15to80
-  random.group = randomize config.customers.group
+  config.customers.age15to80 = randomize config.customers.age15to80
+  config.customers.group = randomize config.customers.group
 
   # customers / names
-  random.familyName = randomize names.family
-  random.femaleName = randomize names.female
-  random.maleName = randomize names.male
+  names.family = randomize names.family
+  names.female = randomize names.female
+  names.male = randomize names.male
 
   # customers / locations, retail
   locations = {}
@@ -97,7 +95,7 @@ Generate.prepare = (cb) ->
     nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
     locations[ row.LocationID ] = population * stateFactor * nearRetail
     locationsRetail[ row.LocationID ] = population * stateFactor * nearRetail * retailByDistance row.Latitude, row.Longitude
-  random.location = randomize locations
+  config.locations = randomize locations
 
   # retail correction
   all = _.reduce (_.map locations, (value) -> value), (memo, curr) -> memo + curr
@@ -106,12 +104,12 @@ Generate.prepare = (cb) ->
   config.orders.retailFactor = _.map config.orders.buy_retail, (actualRetail) -> actualRetail / calcRetail
 
   # orders / shopping basket
-  random.buyAmount = randomize config.orders.buy_amount
-  random.addAmount = randomize config.orders.add_amount
+  config.orders.buy_amount = randomize config.orders.buy_amount
+  config.orders.add_amount = randomize config.orders.add_amount
 
   # products / campaign
   config.orders.campaigns = new Array()
-  random.campaignValue = randomize config.orders.campaign_value
+  config.orders.campaign_value = randomize config.orders.campaign_value
 
   # products / discount
   config.products.discount = _(64).times -> {discount: 0, days: 0}
@@ -148,7 +146,7 @@ retailDistance = (lat1, lon1) ->
 
 randomBirthday = ->
   # age range
-  index = random.age()
+  index = config.customers.age15to80.random()
   fromAge = index * 5 + 20
   # random date
   randomDays = Math.floor( Math.random() * 365 * 5 + 1 )
@@ -164,19 +162,19 @@ createOneCustomer = (id, cb) ->
   time1 = Date.now()
   # name
   title = if Math.random() < 0.5 then "Frau" else "Herr"
-  name = do random.familyName
-  firstName = do random.femaleName if title is "Frau"
-  firstName = do random.maleName if title is "Herr"
+  name = do names.family.random
+  firstName = do names.female.random if title is "Frau"
+  firstName = do names.male.random if title is "Herr"
   birthday = do randomBirthday
 
   # location
-  locationID = do random.location
+  locationID = do config.locations.random
   location = Database.location.get locationID
   postalCode = location.PostalCode[ Math.floor Math.random() * location.PostalCode.length ]
 
   # grouping customers
   _agegroup = setAgeGroup(birthday)  # "51-70", "31-50", "14-30"
-  _group = random.group()             # "family", "athletic", "outdoor"
+  _group = do config.customers.group.random  # "family", "athletic", "outdoor"
 
   # probability that this customer buys in a retail store rather than in an eShop
   # dependig on distance to retail stores
@@ -265,7 +263,7 @@ createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
 
   # check each day if to start a campaign
   if Math.random() < config.orders.campaign_prob[ month ] / 30
-    discountValue = do random.campaignValue
+    discountValue = do config.orders.campaign_value.random
     discountProb = config.orders.campaign_volume[ month ] * ( 1 + (Math.random() * 2 - 1) * config.orders.campaign_volume_fuzzy)
     duration = config.orders.campaign_duration
     config.orders.campaigns.push discountValue: discountValue, discountProb: discountProb, end: date.clone().addDays(duration)
@@ -360,7 +358,7 @@ Generate.orders = (cb) ->
 #––– orderDetails ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 createShoppingBasket = (customer) ->
-  amount = do random.buyAmount
+  amount = do config.orders.buy_amount.random
   ranking = _.map config.products.preferences, (value, index) ->
     value *= config.products.preferences_group[ customer._group ][index] *
             config.products.preferences_sex[ customer.Title ][index] *
@@ -372,7 +370,7 @@ createShoppingBasket = (customer) ->
   _.map ranking, (value) -> value[0]
 
 extendShoppingBasket = (productIds) ->
-  amount = do random.addAmount
+  amount = do config.orders.add_amount.random
   return productIds if amount is 0
   ranking = []
   for productId in productIds
