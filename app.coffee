@@ -28,8 +28,8 @@ async.series [
   (cb) -> Database.location.selection cb
   (cb) -> Database.location.exportCsv "data/output/locations.csv", cb
   (cb) -> Database.customer.exportCsv "data/output/customers.csv", cb
-  (cb) -> Database.order.exportCsv "data/output/oders.csv", cb
-  (cb) -> Database.orderDetail.exportCsv "data/output/oderdetails.csv", cb
+  (cb) -> Database.order.exportCsv "data/output/orders.csv", cb
+  (cb) -> Database.orderDetail.exportCsv "data/output/orderdetails.csv", cb
 
   # ETL
   (cb) -> Database.customerJoined.create cb
@@ -38,6 +38,6 @@ async.series [
   # write after ETL
   (cb) -> Database.product.exportCsv "data/output_etl/products.csv", cb
   (cb) -> Database.customerJoined.exportCsv "data/output_etl/customers.csv", cb
-  (cb) -> Database.orderJoined.exportCsv "data/output_etl/oderdetails.csv", cb
+  (cb) -> Database.orderJoined.exportCsv "data/output_etl/orderdetails.csv", cb
 
   ], (err) -> console.log err if err
