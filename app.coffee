@@ -22,7 +22,8 @@ async.series [
   (cb) -> Generate.orders cb
 
   # print statistics
-  (cb) -> Database.orderDetail.valdidate cb
+  (cb) -> Database.orderDetail.statistic cb
+  (cb) -> Database.customer.statistic cb
 
   # write before ETL
   (cb) -> Database.location.selection cb

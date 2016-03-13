@@ -391,8 +391,8 @@ randomizeBasket = (group, title, agegroup) ->
     Number( value *
     config.products.preferences_group[ group ][index] *
     config.products.preferences_sex[ title ][index] *
-    config.products.preferences_age[ agegroup ][index]) *
-    config.products.normalize[index]
+    config.products.preferences_age[ agegroup ][index] *
+    config.products.normalize[index] )
     # ( 1 + Math.random() * 0.5 ) # TODO: remove this line when function becomes memoized
   -> randomize(ranking).random() + 1
 
@@ -437,16 +437,23 @@ createSomeOrderDetails = (orderId, customer, cb) ->
   # select products
   productIds1 = createShoppingBasket customer
   productIds2 = extendShoppingBasket productIds1
-  ProductIds = [].concat productIds1, productIds2
 
   # merge doubles
+  productIds = [].concat productIds1, productIds2
+  uniqueProductIds = _.uniq productIds
+
+  # quantities
   quantities = {}
-  quantities[id] = (quantities[id] or 0) + 1 for id in ProductIds
-  uniqueProductIds = _.uniq ProductIds
+  quantities[id] = (quantities[id] or 0) + 1 for id in productIds
+  # quantities just for cross-selling statistics
+  quantities2 = {}
+  quantities2[id] = (quantities2[id] or 0) + 1 for id in productIds2
+
+  # console.log "#{JSON.stringify(quantities).replace(/[\"\{\}]/g,"")} #{if _.keys(quantities2).length > 0 then '--->' else ''} #{JSON.stringify(quantities2).replace(/[\"\{\}]/g,"")}"
 
   # create order details
   async.map uniqueProductIds, (productId, cb) ->
     crossSelling = productId in productIds2
-    createOneOrderDetail orderId, productId, quantities[productId], crossSelling, cb
+    createOneOrderDetail orderId, productId, quantities[productId], quantities2[productId] or 0, cb
   , (err, orderDetails) ->
     cb err, orderDetails

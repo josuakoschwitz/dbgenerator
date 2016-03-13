@@ -74,6 +74,25 @@ Database.customer.create = (data, cb) ->
 Database.customer.get = (customerId) ->
   _.clone tableCustomer[customerId-1]
 
+Database.customer.statistic = (cb) ->
+  console.log "\nSTATISTICS of customer groups"
+  console.log "-> total amount of customers: #{ tableCustomer.length }"
+
+  groupCount = {}
+  groupCount[customer._group] = (groupCount[customer._group] or 0) + 1 for customer in tableCustomer
+  console.log "-> interes groups: ", groupCount
+
+  ageGroupCount = {}
+  ageGroupCount[customer._agegroup] = (ageGroupCount[customer._agegroup] or 0) + 1 for customer in tableCustomer
+  console.log "-> age groups: ", ageGroupCount
+
+  titleCount = {}
+  titleCount[customer.Title] = (titleCount[customer.Title] or 0) + 1 for customer in tableCustomer
+  console.log "-> title: ", titleCount
+
+  cb null
+
+
 Database.customer.exportCsv = (path, cb) ->
   Csv.writeFile tableCustomer, path:path, (err) -> cb err
 
@@ -106,27 +125,27 @@ Database.orderDetail.create = (data, cb) ->
   tableOrderDetail.push.apply tableOrderDetail, data
   cb null
 
-Database.orderDetail.valdidate = (cb) ->
+Database.orderDetail.statistic = (cb) ->
   products = _.clone tableProduct
   products = products.map (product) -> product.amount = 0; product.amountCs = 0; product
   statistics = tableOrderDetail
     .reduce ((memo, oDetail) ->
-      if oDetail._crossSelling
-        memo[oDetail.ProductID-1].amountCs += oDetail.Quantity
-      else
-        memo[oDetail.ProductID-1].amount += oDetail.Quantity
+      memo[oDetail.ProductID-1].amount += oDetail.Quantity - oDetail._crossSelling
+      memo[oDetail.ProductID-1].amountCs += oDetail._crossSelling
       return memo), products
     .sort (p1, p2) ->
       p2.amount + p2.amountCs - p1.amount - p1.amountCs
-  statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(4)}+#{p.amountCs.toString().padLeft(4)}=#{(p.amount+p.amountCs).toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)} #{p.ProductName} (#{p.ProductDescription})"
+  console.log "\nSTATISTICS of all bought products"
+  statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(4)} + #{p.amountCs.toString().padLeft(4)} = #{(p.amount+p.amountCs).toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)} #{p.ProductName} (#{p.ProductDescription})"
 
   # statistics
+  count = statistics.map((p) -> p.amount + p.amountCs).reduce((a,b) -> a+b)
   mean = tableOrderDetail.length / 64
   stdDev = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount - p.amountCs), 2
     .reduce (a, b) -> a + b )
-  console.log "\nstatistics of all bought products"
-  console.log "-> sum = #{tableOrderDetail.length}"
+  console.log "\nSTATISTICS of all bought products"
+  console.log "-> count = #{count}"
   console.log "-> arithmetic mean = #{mean}"
   console.log "-> standard deviation (all) = #{stdDev}"
   count1 = statistics.map((p) -> p.amount).reduce((a,b) -> a+b)
@@ -134,8 +153,8 @@ Database.orderDetail.valdidate = (cb) ->
   stdDev1 = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount), 2
     .reduce (a, b) -> a + b )
-  console.log "\nstatistics of bought products (withour cross selling)"
-  console.log "-> sum = #{count1}"
+  console.log "\nSTATISTICS of bought products (withour cross selling)"
+  console.log "-> count = #{count1}"
   console.log "-> arithmetic mean = #{mean1}"
   console.log "-> standard deviation = #{stdDev1}"
   cb null
