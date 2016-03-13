@@ -122,14 +122,18 @@ Generate.prepare = (cb) ->
     age = config.customers.age15to80
     for i in [0...productCount]
       config.products.normalize[i] = 1 / (
-        config.products.preferences_group.family[i]   * config.customers.group.family +
-        config.products.preferences_group.athletic[i] * config.customers.group.athletic +
-        config.products.preferences_group.outdoor[i]  * config.customers.group.outdoor +
-        config.products.preferences_sex.Frau[i]       * 0.5 +
-        config.products.preferences_sex.Herr[i]       * 0.5 +
-        config.products.preferences_age['14-30'][i]   * (age[0]+age[1]+age[2]) +
-        config.products.preferences_age['31-50'][i]   * (age[3]+age[4]+age[5]+age[6]) +
-        config.products.preferences_age['51-80'][i]   * (age[7]+age[8]+age[9]+age[10]+age[11]+age[12])
+        (
+          config.products.preferences_group.family[i]   * config.customers.group.family +
+          config.products.preferences_group.athletic[i] * config.customers.group.athletic +
+          config.products.preferences_group.outdoor[i]  * config.customers.group.outdoor
+        ) * (
+          config.products.preferences_sex.Frau[i]       * 0.5 +
+          config.products.preferences_sex.Herr[i]       * 0.5
+        ) * (
+          config.products.preferences_age['14-30'][i]   * (age[0]+age[1]+age[2]) +
+          config.products.preferences_age['31-50'][i]   * (age[3]+age[4]+age[5]+age[6]) +
+          config.products.preferences_age['51-80'][i]   * (age[7]+age[8]+age[9]+age[10]+age[11]+age[12])
+        )
       )
     # TODO cross selling probability (does not work this way – use ratio between count of selling/crossellling)
     # cs = _.map config.products.correlation, (row) ->
