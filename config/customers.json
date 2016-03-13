@@ -1,9 +1,9 @@
 {
   "count": 60000,
   "current_lead": 30000,
-  "state": {"Schleswig-Holstein":0.88,"Hamburg":0.75,"Niedersachsen":0.90,"Bremen":0.85,"Nordrhein-Westfalen":0.81,"Hessen":0.78,"Rheinland-Pfalz":0.78,"Baden-Württemberg":0.82,"Bayern":0.87,"Saarland":0.71,"Berlin":0.74,"Brandenburg":0.91,"Mecklenburg-Vorpommern":0.86,"Sachsen":0.76,"Sachsen-Anhalt":0.83,"Thüringen":0.69},
-  "age15to80": [0.07,0.06,0.08,0.10,0.10,0.08,0.11,0.12,0.10,0.08,0.05,0.03,0.02],
-  "group": { "family": 0.5, "athletic": 0.2, "outdoor": 0.3 },
+  "state": {"Schleswig-Holstein":88,"Hamburg":75,"Niedersachsen":90,"Bremen":85,"Nordrhein-Westfalen":81,"Hessen":78,"Rheinland-Pfalz":78,"Baden-Württemberg":82,"Bayern":87,"Saarland":71,"Berlin":74,"Brandenburg":91,"Mecklenburg-Vorpommern":86,"Sachsen":76,"Sachsen-Anhalt":83,"Thüringen":69},
+  "age15to80": [ 7, 6, 8,10,10, 8,11,12,10, 8, 5, 3, 2],
+  "group": { "family": 50, "athletic": 20, "outdoor": 30 },
   "retail_stores": {
     "Chemntiz": [50.8333, 12.9167],
     "Dresden": [51.05000, 13.75000],
