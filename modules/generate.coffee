@@ -116,19 +116,31 @@ Generate.prepare = (cb) ->
 
   # products / normalize probability
   productCount = config.products.preferences.length
-  config.products.normalize = []
-  age = config.customers.age15to80
-  for i in [0...productCount]
-    config.products.normalize[i] = 1 / (
-      config.products.preferences_group.family[i]   * config.customers.group.family *
-      config.products.preferences_group.athletic[i] * config.customers.group.athletic *
-      config.products.preferences_group.outdoor[i]  * config.customers.group.outdoor *
-      config.products.preferences_sex.Frau[i]       * 0.5 *
-      config.products.preferences_sex.Herr[i]       * 0.5 *
-      config.products.preferences_age['14-30'][i]   * (age[0]+age[1]+age[2]) *
-      config.products.preferences_age['31-50'][i]   * (age[3]+age[4]+age[5]+age[6]) *
-      config.products.preferences_age['51-80'][i]   * (age[7]+age[8]+age[9]+age[10]+age[11]+age[12])
-    )
+  if config.products.normalize
+    config.products.normalize = []
+    # buy probability
+    age = config.customers.age15to80
+    for i in [0...productCount]
+      config.products.normalize[i] = 1 / (
+        config.products.preferences_group.family[i]   * config.customers.group.family *
+        config.products.preferences_group.athletic[i] * config.customers.group.athletic *
+        config.products.preferences_group.outdoor[i]  * config.customers.group.outdoor *
+        config.products.preferences_sex.Frau[i]       * 0.5 *
+        config.products.preferences_sex.Herr[i]       * 0.5 *
+        config.products.preferences_age['14-30'][i]   * (age[0]+age[1]+age[2]) *
+        config.products.preferences_age['31-50'][i]   * (age[3]+age[4]+age[5]+age[6]) *
+        config.products.preferences_age['51-80'][i]   * (age[7]+age[8]+age[9]+age[10]+age[11]+age[12])
+      )
+    # TODO cross selling probability (does not work this way – use ratio between count of selling/crossellling)
+    # cs = _.map config.products.correlation, (row) ->
+    #         row.map (value) -> (value + 0.1)**2
+    #       .reduce (prev, curr) ->
+    #         _.zip(prev,curr).map (product) -> product[0] + product[1]
+    # for value, i in cs
+    #   config.products.normalize[i] /= value
+  else
+    config.products.normalize = []
+    config.products.normalize[i] = 1 for i in [0...productCount]
 
   # no errors
   cb null
@@ -274,7 +286,7 @@ createOneOrder = (orderId, orderDate, cb) ->
   cb null
 
 
-createSomeOrdersAt = (orderIdOffset, count, date, cb) ->
+createSomeOrdersOn = (orderIdOffset, count, date, cb) ->
   month = date.getMonth()
 
   # check each day if to start a campaign
@@ -358,7 +370,7 @@ createSomeOrders = (totalCount, cb) ->
   for count, day in countsOverall
     date = startDate.clone().addDays( day )
     bar.tick count
-    createSomeOrdersAt orderIdOffset, count, date, (err) -> return cb err if err
+    createSomeOrdersOn orderIdOffset, count, date, (err) -> return cb err if err
     orderIdOffset += count
   cb null
 
@@ -388,37 +400,29 @@ createShoppingBasket = (customer) ->
   amount = do config.orders.buy_amount.random
   productIds = []
   while productIds.length < amount
-    newID = do randomizeBasket customer._group, customer.Title, customer._agegroup
-    productIds.push newID unless newID in productIds
+    productIds.push do randomizeBasket customer._group, customer.Title, customer._agegroup
   productIds
 
+# TODO: memoize this function (_.memoize didn't work well)
 randomizeExtendBaseket = (productIds) ->
   count = config.products.preferences.length
   ranking = (0.9 + 0.2 * Math.random() for i in [0...count])
   for productId in productIds
     for value, index in config.products.correlation[productId]
-      ranking[index] *= Math.pow value + 0.1, 2
+      ranking[index] *= (value + 0.1)**2
   -> randomize(ranking).random() + 1
 
-extendShoppingBasket = (productIds) ->
-  productIdsFinal = _.clone productIds
+extendShoppingBasket = (referenceProductIds) ->
   amount = do config.orders.add_amount.random
-  return productIdsFinal if amount is 0
-  amount += productIdsFinal.length
-  while productIdsFinal.length < amount
-    newID = do randomizeExtendBaseket productIdsFinal
-    productIdsFinal.push newID unless newID in productIdsFinal
-  productIdsFinal
+  productIds = []
+  while productIds.length < amount
+    productIds.push do randomizeExtendBaseket referenceProductIds
+  productIds
 
-createOneOrderDetail = (orderId, productId, crossSeling, cb) ->
-  # FEATURE: product ➔ quantity
-  quantity = 1 + Math.floor Math.random() * config.products.quantities[productId-1]
-  # pick unitPrice from the Product
+createOneOrderDetail = (orderId, productId, quantity, crossSeling, cb) ->
   unitPrice = Database.product.get( productId ).UnitPrice
-  # FEATURE: discountplan/product ➔ discount/product
-  # TODO (medium priority): increase buy probability as discount becomes higher
+  # TODO (low priority): increase buy probability as discount becomes higher
   discount = config.products.discount[ productId-1 ].discount
-
   # return
   cb null,
     OrderDetailID: undefined
@@ -431,12 +435,18 @@ createOneOrderDetail = (orderId, productId, crossSeling, cb) ->
 
 createSomeOrderDetails = (orderId, customer, cb) ->
   # select products
-  productIds = createShoppingBasket customer
-  productIdsFinal = extendShoppingBasket productIds
+  productIds1 = createShoppingBasket customer
+  productIds2 = extendShoppingBasket productIds1
+  ProductIds = [].concat productIds1, productIds2
+
+  # merge doubles
+  quantities = {}
+  quantities[id] = (quantities[id] or 0) + 1 for id in ProductIds
+  uniqueProductIds = _.uniq ProductIds
 
   # create order details
-  async.map productIdsFinal, (productId, cb) ->
-    crossSelling = not (productId in productIds)
-    createOneOrderDetail orderId, productId, crossSelling, cb
+  async.map uniqueProductIds, (productId, cb) ->
+    crossSelling = productId in productIds2
+    createOneOrderDetail orderId, productId, quantities[productId], crossSelling, cb
   , (err, orderDetails) ->
     cb err, orderDetails

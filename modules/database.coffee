@@ -112,9 +112,9 @@ Database.orderDetail.valdidate = (cb) ->
   statistics = tableOrderDetail
     .reduce ((memo, oDetail) ->
       if oDetail._crossSelling
-        memo[oDetail.ProductID-1].amountCs++
+        memo[oDetail.ProductID-1].amountCs += oDetail.Quantity
       else
-        memo[oDetail.ProductID-1].amount++
+        memo[oDetail.ProductID-1].amount += oDetail.Quantity
       return memo), products
     .sort (p1, p2) ->
       p2.amount + p2.amountCs - p1.amount - p1.amountCs
@@ -124,7 +124,7 @@ Database.orderDetail.valdidate = (cb) ->
   stdDev = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount - p.amountCs), 2
     .reduce (a, b) -> a + b )
-  console.log "\nSTATISTICS (ignoring Quantity of OrderDetails)"
+  console.log "\nstatistics of bought products"
   console.log "-> sum = #{tableOrderDetail.length}"
   console.log "-> arithmetic mean = #{mean}"
   console.log "-> standard deviation = #{stdDev}"
