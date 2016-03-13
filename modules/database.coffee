@@ -119,15 +119,25 @@ Database.orderDetail.valdidate = (cb) ->
     .sort (p1, p2) ->
       p2.amount + p2.amountCs - p1.amount - p1.amountCs
   statistics.forEach (p) -> console.log "#{p.amount.toString().padLeft(4)}+#{p.amountCs.toString().padLeft(4)}=#{(p.amount+p.amountCs).toString().padLeft(5)} ⨉ #{p.ProductID.padLeft(2)} #{p.ProductName} (#{p.ProductDescription})"
-  # standard deviation
+
+  # statistics
   mean = tableOrderDetail.length / 64
   stdDev = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount - p.amountCs), 2
     .reduce (a, b) -> a + b )
-  console.log "\nstatistics of bought products"
+  console.log "\nstatistics of all bought products"
   console.log "-> sum = #{tableOrderDetail.length}"
   console.log "-> arithmetic mean = #{mean}"
-  console.log "-> standard deviation = #{stdDev}"
+  console.log "-> standard deviation (all) = #{stdDev}"
+  count1 = statistics.map((p) -> p.amount).reduce((a,b) -> a+b)
+  mean1 = count1 / 64
+  stdDev1 = Math.sqrt( statistics
+    .map (p) -> Math.pow (mean - p.amount), 2
+    .reduce (a, b) -> a + b )
+  console.log "\nstatistics of bought products (withour cross selling)"
+  console.log "-> sum = #{count1}"
+  console.log "-> arithmetic mean = #{mean1}"
+  console.log "-> standard deviation = #{stdDev1}"
   cb null
 
 Database.orderDetail.exportCsv = (path, cb) ->
