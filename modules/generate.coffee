@@ -86,7 +86,7 @@ Generate.prepare = (cb) ->
   names.female = randomize names.female
   names.male = randomize names.male
 
-  # customers / locations, retail
+  # customers / locations, retail by location
   locations = {}
   locationsRetail = {}
   _.each Database.location.all(), (row) ->
@@ -95,13 +95,15 @@ Generate.prepare = (cb) ->
     nearRetail = customersByDistance row.Latitude, row.Longitude  # more customers in citys with retail stores
     locations[ row.LocationID ] = population * stateFactor * nearRetail
     locationsRetail[ row.LocationID ] = population * stateFactor * nearRetail * retailByDistance row.Latitude, row.Longitude
-  config.locations = randomize locations
 
   # retail correction
   all = _.reduce (_.map locations, (value) -> value), (memo, curr) -> memo + curr
   retail = _.reduce locationsRetail, (memo, curr) -> memo + curr
   calcRetail = retail / all
   config.orders.retailFactor = _.map config.orders.buy_retail, (actualRetail) -> actualRetail / calcRetail
+
+  # add retail random function
+  config.locations = randomize locations
 
   # orders / shopping basket
   config.orders.buy_amount = randomize config.orders.buy_amount

@@ -22,6 +22,7 @@ async.series [
   (cb) -> Generate.orders cb
 
   # print statistics
+  (cb) -> Database.order.statistic cb
   (cb) -> Database.orderDetail.statistic cb
   (cb) -> Database.customer.statistic cb
 

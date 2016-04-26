@@ -109,6 +109,21 @@ Database.order.create = (data, cb) ->
 Database.order.exportCsv = (path, cb) ->
   Csv.writeFile tableOrder, path:path, (err) -> cb err
 
+Database.order.statistic = (cb) ->
+  years = _.groupBy tableOrder, (order) -> order.OrderDate.getFullYear()
+  console.log "\nSTATISTICS amount of orders per year"
+  for year, orders of years
+    # calculation
+    amount = orders.length
+    retail = Math.round(1000 * orders.filter((order) -> order.DistributionChannelID is 1).length / amount) / 10
+    eshop = 100 - retail
+    # padding
+    amount = amount.toString().padLeft(7)
+    retail = retail.toString().padLeft(6) + "%"
+    eshop = eshop.toString().padLeft(6) + "%"
+    # print out
+    console.log "#{year}: #{amount} orders #{retail} Retail #{eshop} eShop"
+  cb null
 
 #––– Order Detail ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -144,7 +159,7 @@ Database.orderDetail.statistic = (cb) ->
   stdDev = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount - p.amountCs), 2
     .reduce (a, b) -> a + b )
-  console.log "\nSTATISTICS of all bought products"
+  console.log "\nSTATISTICS amount of bought products (all)"
   console.log "-> count = #{count}"
   console.log "-> arithmetic mean = #{mean}"
   console.log "-> standard deviation (all) = #{stdDev}"
@@ -153,7 +168,7 @@ Database.orderDetail.statistic = (cb) ->
   stdDev1 = Math.sqrt( statistics
     .map (p) -> Math.pow (mean - p.amount), 2
     .reduce (a, b) -> a + b )
-  console.log "\nSTATISTICS of bought products (withour cross selling)"
+  console.log "\nSTATISTICS amount of bought products (without cross selling)"
   console.log "-> count = #{count1}"
   console.log "-> arithmetic mean = #{mean1}"
   console.log "-> standard deviation = #{stdDev1}"
